@@ -1,21 +1,36 @@
-import { StatusBar } from 'expo-status-bar';
-import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-
-export default function App() {
-  return (
-    <View style={styles.container}>
-      <Text>Open up App.js to start working on your app!</Text>
-      <StatusBar style="auto" />
-    </View>
-  );
-}
+// App.js
+import React, { useState } from 'react';
+import { View, StyleSheet } from 'react-native';
+import { Provider } from 'react-native-paper';
+import Home from './Pages/Home';
+import LoginPage from './Pages/LoginPage';
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: '#fff',
   },
 });
+
+export default function App() {
+  const [isLoggedIn, setIsLoggedIn] = useState(false); // 로그인 여부 관리
+
+  const handleLogin = () => {
+    setIsLoggedIn(true); // 로그인 성공 시 Home으로 이동
+  };
+
+  return (
+    <Provider>
+      <View style={styles.container}>
+        {isLoggedIn ? (
+          <Home />  // 로그인 후 Home 화면 표시
+        ) : (
+          <LoginPage onLogin={handleLogin} />  // 로그인 화면 표시
+        )}
+      </View>
+    </Provider>
+  );
+}
+
+
