@@ -4,7 +4,7 @@
 // ini_set('display_errors', 0); // 실제 운영환경에서는 0으로 설정하여 에러를 표시하지 않음
 
 // 데이터베이스 설정 파일 포함
-require_once 'db_config.php';
+require_once '../db/db_config.php';
 
 // JSON 응답을 반환하는 함수
 function sendJsonResponse($statusCode, $message)
