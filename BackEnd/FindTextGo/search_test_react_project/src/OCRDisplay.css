@@ -1,0 +1,38 @@
+.ocr-display-card {
+  max-width: 100%;
+  margin: auto;
+  overflow: hidden;
+}
+
+.ocr-container {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.ocr-image {
+  width: 100%;
+  max-width: 600px; /* Adjust to reduce the image size */
+  height: auto;
+  display: block;
+}
+
+.ocr-bounding-box {
+  position: absolute;
+  border: 2px solid rgba(255, 0, 0, 0.5);
+  background-color: rgba(255, 255, 255, 0.5);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.ocr-text {
+  font-size: 0.8rem;
+  color: black;
+  text-align: center;
+  white-space: pre-wrap;
+  padding: 2px;
+}
