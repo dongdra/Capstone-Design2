@@ -1,98 +1,80 @@
 // SignupModal.js
-import React, { useState } from 'react';
-import { StyleSheet, View, Text } from 'react-native';
-import { TextInput, Button, Modal, Portal, Title } from 'react-native-paper';
+import React, { useState, useEffect } from 'react';
+import { Modal, View, StyleSheet, TouchableOpacity, Text } from 'react-native';
+import Signup1 from './Signup1';
+import Signup2 from './Signup2';
 
 const styles = StyleSheet.create({
-  modalContainer: {
+  modalContent: {
+    width: '90%',
+    height:'80',
     backgroundColor: '#fff',
     padding: 20,
-    marginHorizontal: 20,
-    borderRadius: 15,
-    elevation: 5,
-    alignItems: 'center',
+    borderRadius: 20,
+    alignSelf: 'center',
+    position: 'absolute',
+    marginTop: 100
   },
-  header: {
-    marginBottom: 20,
-    alignItems: 'center',
+  closeButton: {
+    position: 'absolute', 
+    top: 10,              
+    right: 10,            
   },
-  signuppagetitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: 'black',
-  },
-  input: {
-    width: '100%',
-    marginBottom: 15,
-    backgroundColor: '#F7F7F7',
-  },
-  button: {
-    width: '100%',
-    marginTop: 10,
-    backgroundColor:'#536ed9',
-    paddingVertical: 5,
-  },
-  cancelButton: {
-    width: '100%',
-    marginTop: 10,
-    backgroundColor:'#d95e53',
-    paddingVertical: 5,
+  closeButtonText: {
+    fontSize: 18,
+    color: '#333',
   },
 });
 
 export default function SignupModal({ visible, onDismiss, onSignup }) {
+  const [step, setStep] = useState(1); // 단계 관리
   const [signupInfo, setSignupInfo] = useState({
-    name: '',
-    dob: '',
     signupUsername: '',
-    signupPassword: ''
+    signupPassword: '',
+    fullEmail: '',
+    signupname: ''
   });
 
+  // 모달이 닫힐 때 상태를 초기화
+  useEffect(() => {
+    if (!visible) {
+      setStep(1); // 첫 번째 단계로 초기화
+      setSignupInfo({ signupUsername: '', signupPassword: '', fullEmail: '', signupname: '' }); // 입력 정보 초기화
+    }
+  }, [visible]);
+
+  const handleNextStep = () => setStep(2); // 2단계로 이동
+  const handlePreviousStep = () => setStep(1); // 이전 단계로 돌아가기
+  const handleSignup = () => {
+    onSignup(signupInfo); // 회원가입 처리
+    onDismiss(); // 모달 닫기
+  };
+
   return (
-    <Portal>
-      <Modal visible={visible} onDismiss={onDismiss} contentContainerStyle={styles.modalContainer}>
-        <View style={styles.header}>
-          <Title style={styles.signuppagetitle}>회원가입</Title>
-        </View>
-        <TextInput
-          label="이름"
-          value={signupInfo.name}
-          onChangeText={text => setSignupInfo({ ...signupInfo, name: text })}
-          style={styles.input}
-          mode="outlined"
-        />
-        <TextInput
-          label="생년월일"
-          value={signupInfo.dob}
-          onChangeText={text => setSignupInfo({ ...signupInfo, dob: text })}
-          style={styles.input}
-          mode="outlined"
-          placeholder="YYYY-MM-DD"
-        />
-        <TextInput
-          label="아이디"
-          value={signupInfo.signupUsername}
-          onChangeText={text => setSignupInfo({ ...signupInfo, signupUsername: text })}
-          style={styles.input}
-          mode="outlined"
-        />
-        <TextInput
-          label="비밀번호"
-          value={signupInfo.signupPassword}
-          secureTextEntry
-          onChangeText={text => setSignupInfo({ ...signupInfo, signupPassword: text })}
-          style={styles.input}
-          mode="outlined"
-        />
-        <Button mode="contained" onPress={onSignup} style={styles.button}>
-          회원가입
-        </Button>
-        <Button mode="contained" onPress={onDismiss} style={styles.cancelButton}>
-          취소
-        </Button>
-      </Modal>
-    </Portal>
+    <Modal
+      visible={visible}
+      animationType="slide" // 모달 애니메이션을 슬라이드로 설정
+      transparent={true}
+      onRequestClose={onDismiss} // Android의 뒤로 가기 버튼 대응
+    >
+      <View style={styles.modalContent}>
+        {/* 닫기 버튼 */}
+        <TouchableOpacity style={styles.closeButton} onPress={onDismiss}>
+          <Text style={styles.closeButtonText}>X</Text>
+        </TouchableOpacity>
+
+        {/* 단계별 컴포넌트 표시 */}
+        {step === 1 ? (
+          <Signup1 onNext={handleNextStep} />
+        ) : (
+          <Signup2
+            signupInfo={signupInfo}
+            setSignupInfo={setSignupInfo}
+            onSignup={handleSignup}
+            onPrevious={handlePreviousStep} // 이전 단계로 돌아가기
+          />
+        )}
+      </View>
+    </Modal>
   );
 }
-
-

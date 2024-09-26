@@ -12,6 +12,12 @@ const styles = StyleSheet.create({
   },
 });
 
+const UploadRoute = () => (
+  <View style={styles.container}>
+    <Text>파일 업로드 화면입니다.</Text>
+  </View>
+);
+
 const HomeRoute = () => (
   <View style={styles.container}>
     <Text>홈 화면입니다. 로그인 성공!</Text>
@@ -31,14 +37,16 @@ const ProfileRoute = () => (
 );
 
 export default function Home() {
-  const [index, setIndex] = useState(0); // 현재 선택된 탭 인덱스 관리
+  const [index, setIndex] = useState(1); // 현재 선택된 탭 인덱스 관리
   const [routes] = useState([
-    { key: 'profile', title: '프로필', focusedIcon: 'account-circle' },
+    { key: 'upload', title: '파일 업로드', focusedIcon: 'file-upload-outline' },
     { key: 'home', title: '홈', focusedIcon: 'home' },
+    { key: 'profile', title: '프로필', focusedIcon: 'account-circle' },
     { key: 'settings', title: '설정', focusedIcon: 'cog' }
   ]);
 
   const renderScene = BottomNavigation.SceneMap({
+    upload: UploadRoute,
     home: HomeRoute,
     settings: SettingsRoute,
     profile: ProfileRoute,
