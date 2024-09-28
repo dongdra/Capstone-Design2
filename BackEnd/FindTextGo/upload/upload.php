@@ -39,16 +39,9 @@ function getPDFPageCount($filePath)
 // 파일명을 안전하게 처리하는 함수 (보안 강화, 원본 파일명 유지)
 function sanitizeFileName($fileName)
 {
-    // 경로 정보를 제거
     $fileName = basename($fileName);
-    
-    // 허용된 문자: 한글, 영어, 숫자, 공백, 언더스코어, 하이픈, 점
-    $fileName = preg_replace('/[^\p{L}\p{N}\s\_\-\.]/u', '_', $fileName); // 특수 문자를 _로 변경, 한글 및 공백 허용
-    
-    // 트림하여 공백 정리
+    $fileName = preg_replace('/[^\p{L}\p{N}\s\_\-\.]/u', '_', $fileName); 
     $fileName = trim($fileName);
-
-    // XSS 방지를 위해 HTML 엔티티 인코딩
     return htmlspecialchars($fileName, ENT_QUOTES, 'UTF-8');
 }
 
@@ -60,7 +53,7 @@ function isValidPDF($filePath)
     fclose($file);
 
     if ($header !== '%PDF') {
-        return false; // PDF 형식이 아님
+        return false;
     }
 
     try {
@@ -80,7 +73,7 @@ function isValidPDF($filePath)
 // 회원 인증
 function authenticateUser($conn, $identifier, $password)
 {
-    $sql = "SELECT user_id, password FROM members 
+    $sql = "SELECT user_id, username, password FROM members 
             WHERE (username = ? OR email = ?) AND is_active = 1 LIMIT 1";
     $stmt = $conn->prepare($sql);
 
@@ -104,15 +97,16 @@ function authenticateUser($conn, $identifier, $password)
 
     $stmt->close();
 
-    return $user['user_id'];
+    return $user;
 }
 
 // PDF 파일 저장 처리 함수
-function savePDFFile($conn, $userId, $file, $fileHash, $fileExtension)
+function savePDFFile($conn, $user, $file, $fileHash, $fileExtension)
 {
     $pageCount = getPDFPageCount($file['tmp_name']);
+    $userId = $user['user_id'];
 
-    // 이전과 동일한 파일 체크 로직
+    // 파일 중복 체크
     $fileExistsQuery = "SELECT file_id FROM file_info WHERE file_hash = ?";
     $fileExistsStmt = $conn->prepare($fileExistsQuery);
     $fileExistsStmt->bind_param("s", $fileHash);
@@ -169,7 +163,7 @@ function savePDFFile($conn, $userId, $file, $fileHash, $fileExtension)
     }
 
     // 이미지 변환 실행 및 변환된 이미지 수 확인
-    $processedCount = processImages($filePath, $fileDir, $pageCount);
+    $processedCount = processImages($filePath, $fileDir, $pageCount, $user['username']);
 
     if ($processedCount === false) {
         sendJsonResponse(500, '이미지 변환 처리 중 오류가 발생했습니다.');
@@ -186,13 +180,13 @@ function savePDFFile($conn, $userId, $file, $fileHash, $fileExtension)
 }
 
 // 이미지 변환 함수
-function processImages($pdfPath, $outputDir, $pageCount)
+function processImages($pdfPath, $outputDir, $pageCount, $userName)
 {
     $pythonCommand = getPythonCommand();
     $scriptPath = __DIR__ . '/save_pdf_as_png.py'; // Python 스크립트 경로
 
     // Python 스크립트를 실행하고 출력 결과를 확인
-    $command = escapeshellcmd("$pythonCommand $scriptPath " . escapeshellarg($pdfPath) . " " . escapeshellarg($outputDir));
+    $command = escapeshellcmd("$pythonCommand $scriptPath " . escapeshellarg($pdfPath) . " " . escapeshellarg($outputDir) . " " . escapeshellarg($userName));
     $output = [];
     exec($command, $output, $returnVar);
 
@@ -238,10 +232,10 @@ try {
     }
 
     $conn = getDbConnection();
-    $userId = authenticateUser($conn, $identifier, $password);
+    $user = authenticateUser($conn, $identifier, $password);
     $fileHash = hash_file('sha256', $file['tmp_name']);
 
-    savePDFFile($conn, $userId, $file, $fileHash, $fileExtension);
+    savePDFFile($conn, $user, $file, $fileHash, $fileExtension);
 
     sendJsonResponse(200, '파일이 성공적으로 업로드되었습니다.');
 
