@@ -7,7 +7,7 @@ import Signup2 from './Signup2';
 const styles = StyleSheet.create({
   modalContent: {
     width: '90%',
-    height:'80',
+    height: '80%',
     backgroundColor: '#fff',
     padding: 20,
     borderRadius: 20,
@@ -26,27 +26,24 @@ const styles = StyleSheet.create({
   },
 });
 
+// SignupModal.js에서 onSignup을 받아서 처리하는 부분
 export default function SignupModal({ visible, onDismiss, onSignup }) {
   const [step, setStep] = useState(1); // 단계 관리
-  const [signupInfo, setSignupInfo] = useState({
-    signupUsername: '',
-    signupPassword: '',
-    fullEmail: '',
-    signupname: ''
-  });
 
   // 모달이 닫힐 때 상태를 초기화
   useEffect(() => {
     if (!visible) {
       setStep(1); // 첫 번째 단계로 초기화
-      setSignupInfo({ signupUsername: '', signupPassword: '', fullEmail: '', signupname: '' }); // 입력 정보 초기화
     }
   }, [visible]);
 
   const handleNextStep = () => setStep(2); // 2단계로 이동
   const handlePreviousStep = () => setStep(1); // 이전 단계로 돌아가기
-  const handleSignup = () => {
-    onSignup(signupInfo); // 회원가입 처리
+
+  const handleSignupSuccess = () => {
+    if (onSignup) {
+      onSignup(); // 회원가입 완료 후 추가 처리
+    }
     onDismiss(); // 모달 닫기
   };
 
@@ -67,14 +64,10 @@ export default function SignupModal({ visible, onDismiss, onSignup }) {
         {step === 1 ? (
           <Signup1 onNext={handleNextStep} />
         ) : (
-          <Signup2
-            signupInfo={signupInfo}
-            setSignupInfo={setSignupInfo}
-            onSignup={handleSignup}
-            onPrevious={handlePreviousStep} // 이전 단계로 돌아가기
-          />
+          <Signup2 onSignup={handleSignupSuccess} onPrevious={handlePreviousStep} />
         )}
       </View>
     </Modal>
   );
 }
+

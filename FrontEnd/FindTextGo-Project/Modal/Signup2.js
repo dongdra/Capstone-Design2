@@ -1,7 +1,9 @@
+//Signup2.js
 import React, { useState } from 'react';
 import { View, StyleSheet, Alert, Text } from 'react-native';
 import { TextInput, Button, Title } from 'react-native-paper';
 import DropDownPicker from 'react-native-dropdown-picker';
+import { API_BASE_URL } from '@env'; // .env에서 API_BASE_URL 불러오기
 
 const styles = StyleSheet.create({
   signuppagetitle: {
@@ -56,17 +58,22 @@ const styles = StyleSheet.create({
   },
 });
 
-export default function Signup2({ signupInfo, setSignupInfo, onSignup, onPrevious }) {
+export default function Signup2({ onSignup, onPrevious }) {
+  const [signupUsername, setSignupUsername] = useState('');
+  const [signupPassword, setSignupPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [signupemail, setSignupemail] = useState(''); // signupemail은 signupInfo와 연동하지 않음
+  const [signupname, setSignupname] = useState('');
+  const [signupemail, setSignupemail] = useState(''); 
   const [emailDomain, setEmailDomain] = useState('');
   const [showPassword1, setShowPassword1] = useState(false); 
   const [showPassword2, setShowPassword2] = useState(false); 
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState([
     { label: 'gmail.com', value: 'gmail.com' },
-    { label: 'nate.com', value: 'nate.com' },
+    { label: 'kakao.com', value: 'kakao.com' },
     { label: 'naver.com', value: 'naver.com' },
+    { label: 'daum.net', value: 'daum.net' },
+    { label: 'example.com', value: 'example.com' }
   ]);
 
   const isPasswordValid = (password) => {
@@ -75,79 +82,81 @@ export default function Signup2({ signupInfo, setSignupInfo, onSignup, onPreviou
   };
 
   const handleEmailInput = (text) => {
-    // 한글이 포함된 경우 경고 메시지를 출력하고 입력을 무시
     if (!/^[\u0000-\u007F]*$/.test(text)) {
       Alert.alert('오류', '이메일에는 한글을 사용할 수 없습니다.');
       return;
     }
     setSignupemail(text);
-    updateEmail(text, emailDomain); // 이메일 변경 시 fullEmail 업데이트
-  };
-
-   // 이메일과 도메인이 변경될 때마다 fullEmail을 업데이트
-   const updateEmail = (email, domain) => {
-    const fullEmail = email && domain ? `${email}@${domain}` : '';
-    setSignupInfo({ ...signupInfo, fullEmail });
   };
 
   const handleSignup = async () => {
-    
-    if (!signupInfo.signupUsername || !signupInfo.signupPassword || !confirmPassword || !signupInfo.signupname || !signupemail || !emailDomain) {
+    if (!signupUsername || !signupPassword || !confirmPassword || !signupname || !signupemail || !emailDomain) {
       Alert.alert('오류', '모든 필드를 입력해주세요.');
       return;
     }
-
-    if (!isPasswordValid(signupInfo.signupPassword)) {
+  
+    if (!isPasswordValid(signupPassword)) {
       Alert.alert('오류', '비밀번호는 8자리 이상이며, 알파벳과 숫자를 포함해야 합니다.');
       return;
     }
-
-    if (signupInfo.signupPassword !== confirmPassword) {
+  
+    if (signupPassword !== confirmPassword) {
       Alert.alert('오류', '비밀번호가 일치하지 않습니다.');
       return;
     }
-
+  
+    const signupData = {
+      username: signupUsername,
+      password: signupPassword,
+      email: `${signupemail}@${emailDomain}`,
+      name: signupname
+    };
+  
+    console.log("회원가입 전송 데이터:", JSON.stringify(signupData));
+  
     try {
-      const response = await fetch('/signup.php', {
+      const response = await fetch(`${API_BASE_URL}/user/signup.php`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          username: signupInfo.signupUsername,
-          password: signupInfo.signupPassword,
-          email: signupInfo.fullEmail, // 완성된 이메일을 전달
-          name: signupInfo.signupname,
-        }),
+        body: JSON.stringify(signupData),
       });
-
-      const result = await response.json();
-
-      if (result.StatusCode === 200 && result.message === "Sign up successfully") {
+  
+      const data = await response.json(); // 서버로부터 받은 JSON 데이터를 'data'로 받음
+  
+      console.log("서버 응답 데이터:", data.StatusCode);
+  
+      if (data.StatusCode === 200) 
+      {  // StatusCode가 200인 경우 성공 처리
         Alert.alert('성공', '회원가입에 성공하였습니다.');
-        onSignup();
-      } else {
-        Alert.alert('오류', result.message || '회원가입에 실패하였습니다.');
+        onSignup();  // 회원가입 성공 시 처리
+      } 
+      else
+      {
+        Alert.alert("회원가입 실패","회원가입에 실패했습니다. 다시 시도해 주세요.");
       }
     } catch (error) {
-      Alert.alert('오류', '서버와의 통신 중 문제가 발생했습니다.');
+      console.error(error);
+	   Alert.alert("회원가입 실패","회원가입에 실패했습니다. 다시 시도해 주세요.");
     }
   };
+  
 
   return (
     <View style={styles.modalContainer}>
       <Title style={styles.signuppagetitle}>회원가입</Title>
       <TextInput
-        value={signupInfo.signupUsername}
-        onChangeText={text => setSignupInfo({ ...signupInfo, signupUsername: text })}
+        value={signupUsername}
+        onChangeText={setSignupUsername}
         style={styles.input}
         mode="outlined"
         placeholder="아이디를 입력하세요."
       />
       <TextInput
-        value={signupInfo.signupPassword}
+        value={signupPassword}
         secureTextEntry={!showPassword1}
-        onChangeText={text => setSignupInfo({ ...signupInfo, signupPassword: text })}
+        onChangeText={setSignupPassword}
         style={styles.input}
         mode="outlined"
         placeholder="비밀번호를 입력하세요."
@@ -161,7 +170,7 @@ export default function Signup2({ signupInfo, setSignupInfo, onSignup, onPreviou
       <TextInput
         value={confirmPassword}
         secureTextEntry={!showPassword2} 
-        onChangeText={text => setConfirmPassword(text)}
+        onChangeText={setConfirmPassword}
         style={styles.input}
         mode="outlined"
         placeholder="비밀번호 중복 검사"
@@ -173,32 +182,28 @@ export default function Signup2({ signupInfo, setSignupInfo, onSignup, onPreviou
         }
       />
       <TextInput
-        value={signupInfo.signupname} 
-        onChangeText={text => setSignupInfo({ ...signupInfo, signupname: text })}
+        value={signupname} 
+        onChangeText={setSignupname}
         style={styles.input}
         mode="outlined"
         placeholder="이름을 입력하세요."
       />
       
       <View style={styles.emailContainer}>
-      <TextInput
-  value={signupemail}
-  onChangeText={handleEmailInput} // 한글 필터링 로직 추가
-  style={styles.emailInput}
-  mode="outlined"
-  placeholder="이메일 아이디"
-/>
+        <TextInput
+          value={signupemail}
+          onChangeText={handleEmailInput}
+          style={styles.emailInput}
+          mode="outlined"
+          placeholder="이메일 아이디"
+        />
         <Text style={styles.atSymbol}>@</Text>
         <DropDownPicker
           open={open}
           value={emailDomain}
           items={items}
           setOpen={setOpen}
-          setValue={(callback) => {
-            const domain = callback(); // 콜백을 통해 도메인 값 가져오기
-            setEmailDomain(domain); 
-            updateEmail(signupemail, domain); // 도메인 변경 시 fullEmail 업데이트
-          }}
+          setValue={setEmailDomain}
           setItems={setItems}
           placeholder="이메일 선택"
           containerStyle={styles.dropdownButton}
@@ -216,3 +221,4 @@ export default function Signup2({ signupInfo, setSignupInfo, onSignup, onPreviou
     </View>
   );
 }
+

@@ -1,65 +1,49 @@
 // Home.js
-import React, { useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { BottomNavigation } from 'react-native-paper';
+import React from 'react';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { MaterialIcons } from '@expo/vector-icons';
+import { Platform } from 'react-native'; // 추가
+import UploadScreen from './UploadScreen';
+import HomeScreen from './HomeScreen';
+import ProfileScreen from './ProfileScreen';
+import SettingsScreen from './SettingsScreen';
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-  },
-});
+const Tab = createBottomTabNavigator();
 
-const UploadRoute = () => (
-  <View style={styles.container}>
-    <Text>파일 업로드 화면입니다.</Text>
-  </View>
-);
-
-const HomeRoute = () => (
-  <View style={styles.container}>
-    <Text>홈 화면입니다. 로그인 성공!</Text>
-  </View>
-);
-
-const SettingsRoute = () => (
-  <View style={styles.container}>
-    <Text>설정 화면입니다.</Text>
-  </View>
-);
-
-const ProfileRoute = () => (
-  <View style={styles.container}>
-    <Text>프로필 화면입니다.</Text>
-  </View>
-);
-
-export default function Home() {
-  const [index, setIndex] = useState(1); // 현재 선택된 탭 인덱스 관리
-  const [routes] = useState([
-    { key: 'upload', title: '파일 업로드', focusedIcon: 'file-upload-outline' },
-    { key: 'home', title: '홈', focusedIcon: 'home' },
-    { key: 'profile', title: '프로필', focusedIcon: 'account-circle' },
-    { key: 'settings', title: '설정', focusedIcon: 'cog' }
-  ]);
-
-  const renderScene = BottomNavigation.SceneMap({
-    upload: UploadRoute,
-    home: HomeRoute,
-    settings: SettingsRoute,
-    profile: ProfileRoute,
-  });
-
+export default function Home({ onLogout }) {
   return (
-    <BottomNavigation
-      navigationState={{ index, routes }}
-      onIndexChange={setIndex}
-      renderScene={renderScene}
-      barStyle={{ height: 75, backgroundColor: '#ffffff', borderTopWidth: 1, borderTopColor: 'black'}}
-    />
+    <Tab.Navigator
+      initialRouteName="Home"
+      screenOptions={({ route }) => ({
+        tabBarIcon: ({ color, size }) => {
+          let iconName;
+          if (route.name === 'Upload') {
+            iconName = 'file-upload';
+          } else if (route.name === 'Home') {
+            iconName = 'home';
+          } else if (route.name === 'Profile') {
+            iconName = 'account-circle';
+          } else if (route.name === 'Settings') {
+            iconName = 'settings';
+          }
+          return <MaterialIcons name={iconName} size={size} color={color} />;
+        },
+        tabBarActiveTintColor: 'black',
+        tabBarInactiveTintColor: 'gray',
+        tabBarStyle: {
+          height: Platform.OS === 'android' ? 50 : 75, 
+          backgroundColor: '#ffffff',
+          borderTopWidth: 1,
+          borderTopColor: 'black',
+        },
+      })}
+    >
+      <Tab.Screen name="Upload" component={UploadScreen} options={{ tabBarLabel: '파일 업로드' }} />
+      <Tab.Screen name="Home" component={HomeScreen} options={{ tabBarLabel: '홈' }} />
+      <Tab.Screen name="Profile" component={ProfileScreen} options={{ tabBarLabel: '프로필' }} />
+      <Tab.Screen name="Settings">
+        {() => <SettingsScreen onLogout={onLogout} />}
+      </Tab.Screen>
+    </Tab.Navigator>
   );
 }
-
-
