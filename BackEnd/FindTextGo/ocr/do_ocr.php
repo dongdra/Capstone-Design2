@@ -1,7 +1,10 @@
 <?php
-// OCR 처리 및 데이터 저장 함수
+// 에러 보고 수준 설정
+// error_reporting(E_ALL);
+// ini_set('display_errors', value: true); // 실제 운영환경에서는 0으로 설정하여 에러를 표시하지 않음
 
 require_once '../db/db_config.php';
+require_once './vendor/autoload.php'; // PDF 라이브러리 로드
 
 // JSON 응답을 반환하는 함수
 function sendJsonResponse($statusCode, $message)
@@ -14,129 +17,120 @@ function sendJsonResponse($statusCode, $message)
 // OS에 따라 Python 명령어를 결정하는 함수
 function getPythonCommand()
 {
-    // 윈도우 시스템에서는 python, 리눅스/맥에서는 python3 사용
     return strtoupper(substr(PHP_OS, 0, 3)) === 'WIN' ? 'python' : 'python3';
 }
 
-function processOCR($conn)
+// PDF 페이지 수 추출
+function getPDFPageCount($filePath)
 {
-    // OCR 처리가 필요한 파일을 가져옴
-    $query = "SELECT file_id, pdf_page_count FROM file_info WHERE ocr_processed_count = 0 LIMIT 1";
-    $stmt = $conn->prepare($query);
-    $stmt->execute();
-    $result = $stmt->get_result();
+    try {
+        $parser = new \Smalot\PdfParser\Parser();
+        $pdf = $parser->parseFile($filePath);
+        $details = $pdf->getDetails();
 
-    if ($result->num_rows === 0) {
-        sendJsonResponse(404, 'OCR 처리가 필요한 파일이 없습니다.');
+        return isset($details['Pages']) ? (int)$details['Pages'] : 0;
+    } catch (\Exception $e) {
+        return 0;
     }
+}
 
-    $file = $result->fetch_assoc();
-    $fileId = $file['file_id'];
-    $pageCount = $file['pdf_page_count'];
+// 파일명 안전하게 처리
+function sanitizeFileName($fileName)
+{
+    $fileName = basename($fileName);
+    $fileName = preg_replace('/[^\p{L}\p{N}\s\_\-\.]/u', '_', $fileName); 
+    return htmlspecialchars($fileName, ENT_QUOTES, 'UTF-8');
+}
 
-    $fileDir = "../documents/$fileId";
+// base64 데이터에서 확장자 추출
+function getExtensionFromBase64($base64Data)
+{
+    preg_match('/^data:application\/pdf;base64,/', $base64Data, $matches);
+    if ($matches) {
+        return 'pdf';
+    }
+    return null;
+}
+
+// base64로 파일 저장 처리
+function saveBase64File($base64Data, $filename)
+{
+    $data = explode(',', $base64Data);
+    if (count($data) !== 2) {
+        return false;
+    }
     
-    // 페이지 별 PNG 파일에 OCR 처리
-    for ($page = 1; $page <= $pageCount; $page++) {
-        $imagePath = "$fileDir/$page.png";
-
-        if (!file_exists($imagePath)) {
-            continue; // 이미지가 없으면 다음으로 넘어감
-        }
-
-        // OCR 결과를 받기 위해 Python 스크립트 호출
-        $ocrResult = runOCR($imagePath);
-
-        if ($ocrResult === false) {
-            sendJsonResponse(500, 'OCR 처리 중 오류가 발생했습니다.');
-        }
-
-        // OCR 결과 데이터베이스에 저장
-        saveOCRData($conn, $fileId, $page, $ocrResult);
+    $decodedData = base64_decode($data[1]);
+    if ($decodedData === false) {
+        return false;
     }
-
-    // 모든 OCR 처리가 완료된 경우 파일 정보 업데이트
-    $updateQuery = "UPDATE file_info SET ocr_processed_count = ? WHERE file_id = ?";
-    $updateStmt = $conn->prepare($updateQuery);
-    $updateStmt->bind_param("ii", $pageCount, $fileId);
-    $updateStmt->execute();
-    $updateStmt->close();
-
-    sendJsonResponse(200, 'OCR 처리가 완료되었습니다.');
+    
+    $filepath = tempnam(sys_get_temp_dir(), 'pdf_');
+    file_put_contents($filepath, $decodedData);
+    
+    return $filepath;
 }
 
-// Python OCR 스크립트를 실행하여 텍스트를 추출하는 함수
-function runOCR($imagePath)
+// 회원 인증 함수
+function authenticateUser($conn, $identifier, $password)
 {
-    // URL of the Flask API
-    $apiUrl = 'http://localhost:5000/ocr';
-
-    // Set up the request data
-    $postData = json_encode(['image_path' => $imagePath]);
-
-    // Initialize cURL session
-    $ch = curl_init($apiUrl);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_HTTPHEADER, [
-        'Content-Type: application/json',
-        'Content-Length: ' . strlen($postData)
-    ]);
-    curl_setopt($ch, CURLOPT_POST, true);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, $postData);
-
-    // Execute cURL request
-    $response = curl_exec($ch);
-
-    if ($response === false) {
-        sendJsonResponse(500, 'Failed to connect to OCR API: ' . curl_error($ch));
-    }
-
-    curl_close($ch);
-
-    // Decode the response
-    $responseData = json_decode($response, true);
-
-    if (json_last_error() !== JSON_ERROR_NONE) {
-        sendJsonResponse(500, 'JSON parsing error: ' . json_last_error_msg());
-    }
-
-    // Check if the OCR processing was successful
-    if ($responseData['StatusCode'] !== 200) {
-        sendJsonResponse($responseData['StatusCode'], $responseData['message']);
-    }
-
-    return $responseData['data'];
-}
-
-// OCR 결과를 데이터베이스에 저장하는 함수
-function saveOCRData($conn, $fileId, $pageNumber, $ocrResult)
-{
-    $insertQuery = "INSERT INTO ocr_data (file_id, page_number, extracted_text, coord_x, coord_y, coord_width, coord_height) 
-                    VALUES (?, ?, ?, ?, ?, ?, ?)";
-    $stmt = $conn->prepare($insertQuery);
-
+    $sql = "SELECT user_id, username, password FROM members WHERE (username = ? OR email = ?) AND is_active = 1 LIMIT 1";
+    $stmt = $conn->prepare($sql);
     if (!$stmt) {
         throw new Exception('Failed to prepare statement: ' . $conn->error);
     }
 
-    foreach ($ocrResult as $data) {
-        $extractedText = $data['text'];
-        $coordX = $data['x'];
-        $coordY = $data['y'];
-        $coordWidth = $data['width'];
-        $coordHeight = $data['height'];
+    $stmt->bind_param("ss", $identifier, $identifier);
+    $stmt->execute();
+    $result = $stmt->get_result();
 
-        $stmt->bind_param("iisiiii", $fileId, $pageNumber, $extractedText, $coordX, $coordY, $coordWidth, $coordHeight);
-        $stmt->execute();
+    if ($result->num_rows === 0) {
+        sendJsonResponse(401, '아이디/이메일 또는 비밀번호가 잘못되었습니다.');
     }
 
-    $stmt->close();
+    $user = $result->fetch_assoc();
+    if (!password_verify($password, $user['password'])) {
+        sendJsonResponse(401, '아이디/이메일 또는 비밀번호가 잘못되었습니다.');
+    }
+
+    return $user;
 }
 
-// 메인 실행 부분 (OCR 처리 시작)
+// main logic
 try {
+    // JSON 데이터를 읽어 처리
+    $requestData = json_decode(file_get_contents('php://input'), true);
+
+    $identifier = trim($requestData['identifier'] ?? '');
+    $password = trim($requestData['password'] ?? '');
+    $base64File = $requestData['file_base64'] ?? '';
+    $filename = sanitizeFileName($requestData['filename'] ?? 'noname.pdf');
+
+    if (!$identifier || !$password || !$base64File) {
+        sendJsonResponse(400, '아이디/이메일, 비밀번호 및 파일을 모두 입력해야 합니다.');
+    }
+
+    // 확장자 추출 및 파일명 처리
+    $fileExtension = getExtensionFromBase64($base64File);
+    if ($fileExtension !== 'pdf') {
+        sendJsonResponse(400, '올바르지 않은 파일 형식입니다.');
+    }
+
+    if (pathinfo($filename, PATHINFO_EXTENSION) !== 'pdf') {
+        $filename = pathinfo($filename, PATHINFO_FILENAME) . '.pdf';
+    }
+
+    // base64 파일 저장 처리
+    $filePath = saveBase64File($base64File, $filename);
+    if ($filePath === false || !isValidPDF($filePath)) {
+        sendJsonResponse(400, '올바르지 않은 PDF 파일입니다.');
+    }
+
+    // DB 연결 및 사용자 인증
     $conn = getDbConnection();
-    processOCR($conn);
+    $user = authenticateUser($conn, $identifier, $password);
+
+    // 이후 PDF 저장 및 이미지 처리 로직 실행
 
 } catch (Exception $e) {
     sendJsonResponse(500, '오류가 발생했습니다: ' . $e->getMessage());
