@@ -2,9 +2,8 @@
 import sys
 import os
 from pdf2image import convert_from_path
+from PIL import Image, ImageDraw, ImageFont
 from datetime import datetime
-import cv2
-import numpy as np
 
 def convert_pdf_to_images(pdf_path, output_dir, user_name):
     try:
@@ -31,64 +30,35 @@ def convert_pdf_to_images(pdf_path, output_dir, user_name):
             # Save the image in WEBP format
             page.save(webp_path, 'WEBP')
 
-            # Apply watermark
+            # Apply watermark using Pillow
             watermark_text = f"Uploaded by {user_name} on {current_date}"
-            embed_watermark(png_path, png_path, watermark_text)
-            embed_watermark(webp_path, webp_path, watermark_text)
+            add_watermark(png_path, watermark_text)
+            add_watermark(webp_path, watermark_text)
 
         print("success")
     except Exception as e:
         print(f"error: {str(e)}")
 
-def embed_watermark(input_image_path, output_image_path, watermark_text):
-    # Load color image (BGR)
-    img = cv2.imread(input_image_path)
+def add_watermark(image_path, watermark_text):
+    # Open an image file
+    with Image.open(image_path) as img:
+        # Make the image editable
+        drawing = ImageDraw.Draw(img)
 
-    # Convert the image to YUV to insert watermark in the Y channel
-    yuv_img = cv2.cvtColor(img, cv2.COLOR_BGR2YUV)
-    y_channel = yuv_img[:, :, 0]
+        # Define the font (you might need to provide the path to a .ttf file)
+        try:
+            font = ImageFont.truetype("arial.ttf", 36)  # You can adjust the font size
+        except IOError:
+            font = ImageFont.load_default()
 
-    # Convert the watermark text to binary bit sequence
-    watermark_bits = np.unpackbits(np.frombuffer(watermark_text.encode('utf-8'), dtype=np.uint8))
-    wm_size = y_channel.shape[0] // 8 * y_channel.shape[1] // 8
-    watermark_bits = np.pad(watermark_bits, (0, wm_size - len(watermark_bits)), 'constant')
+        # Position for the watermark
+        text_position = (img.width - 300, img.height - 50)  # Adjust the position as needed
 
-    # Randomly distribute watermark bits within the image blocks
-    np.random.seed(42)  # Ensures repeatability
-    indices = np.random.permutation(wm_size)
+        # Add watermark text to the image
+        drawing.text(text_position, watermark_text, fill=(255, 255, 255), font=font)
 
-    # Insert the watermark into 8x8 blocks
-    bit_index = 0
-    for i in range(0, y_channel.shape[0], 8):
-        for j in range(0, y_channel.shape[1], 8):
-            if bit_index >= len(indices):
-                break
-
-            # Select current block
-            block = y_channel[i:i+8, j:j+8]
-            if block.size == 0:
-                continue
-
-            # Dynamically adjust embedding strength
-            mean_intensity = block.mean()
-            strength = 1 if mean_intensity < 128 else 0.5
-
-            # Insert watermark bit at random location in the block
-            idx = indices[bit_index]
-            block_index = (idx // block.shape[1], idx % block.shape[1])
-            block[block_index] = (block[block_index] & ~1) | int(watermark_bits[bit_index]) * strength
-            y_channel[i:i+8, j:j+8] = block
-
-            bit_index += 1
-
-    # Update the Y channel in the original image
-    yuv_img[:, :, 0] = y_channel
-
-    # Convert YUV image back to BGR
-    watermarked_img = cv2.cvtColor(yuv_img, cv2.COLOR_YUV2BGR)
-
-    # Save the watermarked image
-    cv2.imwrite(output_image_path, watermarked_img)
+        # Save the watermarked image back to the file
+        img.save(image_path)
 
 if __name__ == "__main__":
     # Get PDF path and output directory from command line arguments
