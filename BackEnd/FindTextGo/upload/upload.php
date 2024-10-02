@@ -36,7 +36,11 @@ function processImages($pdfPath, $outputDir, $pageCount, $userName)
 	$output = [];
 	exec($command, $output, $returnVar);
 
-	// Python 스크립트의 출력 확인
+	// 디버깅: 명령어와 결과 출력
+	error_log("Command: $command");
+	error_log("Output: " . implode("\n", $output));
+	error_log("Return var: $returnVar");
+
 	if ($returnVar !== 0 || empty($output) || strpos($output[0], 'success') === false) {
 		return false;
 	}
