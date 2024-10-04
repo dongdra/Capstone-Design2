@@ -14,6 +14,29 @@ function sendJsonResponse($statusCode, $message)
 	exit;
 }
 
+// 사용자 인증 함수
+function authenticateUser($conn, $identifier, $password)
+{
+	// identifier는 이메일 혹은 아이디로 간주
+	$sql = "SELECT user_id FROM users WHERE (email = ? OR username = ?) AND password = ?";
+	$stmt = $conn->prepare($sql);
+	if (!$stmt) {
+		throw new Exception('Failed to prepare statement: ' . $conn->error);
+	}
+	$stmt->bind_param("sss", $identifier, $identifier, $password);
+	$stmt->execute();
+	$result = $stmt->get_result();
+
+	if ($result->num_rows === 0) {
+		throw new Exception('아이디/이메일 또는 비밀번호가 잘못되었습니다.');
+	}
+
+	$user = $result->fetch_assoc();
+	$stmt->close();
+
+	return $user['user_id']; // user_id 반환
+}
+
 // 파일 목록을 가져오는 함수 (특정 사용자만 조회)
 function getFileList($conn, $userId)
 {
@@ -44,11 +67,18 @@ try {
 	// DB 연결
 	$conn = getDbConnection();
 
-	// GET 요청에서 user_id 가져오기
-	if (!isset($_GET['user_id'])) {
-		throw new Exception('user_id is required');
+	// POST 요청 데이터 가져오기
+	$input = json_decode(file_get_contents("php://input"), true);
+	$identifier = $input['identifier'] ?? null;
+	$password = $input['password'] ?? null;
+
+	// 아이디와 비밀번호 확인
+	if (!$identifier || !$password) {
+		sendJsonResponse(400, "아이디/이메일과 비밀번호를 모두 입력해야 합니다.");
 	}
-	$userId = intval($_GET['user_id']);
+
+	// 사용자 인증 및 user_id 가져오기
+	$userId = authenticateUser($conn, $identifier, $password);
 
 	// 해당 사용자의 파일 목록 조회
 	$fileList = getFileList($conn, $userId);
@@ -61,4 +91,3 @@ try {
 }
 
 ?>
-
