@@ -23,7 +23,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
 function authenticateUser($conn, $identifier, $password)
 {
    // identifier는 유저네임 또는 이메일로 가정
-   $sql = "SELECT user_id, username FROM users WHERE (email = ? OR username = ?) AND password = ?";
+   $sql = "SELECT user_id, username FROM members WHERE (email = ? OR username = ?) AND password = ?";
    $stmt = $conn->prepare($sql);
    if (!$stmt) {
       throw new Exception('Failed to prepare statement: ' . $conn->error);
@@ -107,4 +107,3 @@ try {
 }
 
 ?>
-
