@@ -22,6 +22,11 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 try {
     // php://input을 사용하여 JSON 데이터를 받아옵니다.
     $input = file_get_contents("php://input");
+    $data = json_decode($input, true);
+
+    // 입력값 확인 및 변수 설정
+    $identifier = trim($data['identifier'] ?? ''); // 아이디 또는 이메일
+    $password = trim($data['password'] ?? '');
 
     // 필수 입력값 확인
     if (!$identifier || !$password) {
@@ -44,18 +49,23 @@ try {
     $stmt->bind_param("ss", $identifier, $identifier);
     $stmt->execute();
     $result = $stmt->get_result();
+
     // 사용자 존재 여부 확인
     if ($result->num_rows === 0) {
         sendJsonResponse(401, '아이디/이메일 또는 비밀번호가 잘못되었습니다.');
     }
+
     // 사용자 정보 가져오기
     $user = $result->fetch_assoc();
+
     // 비밀번호 확인
     if (!password_verify($password, $user['password'])) {
         sendJsonResponse(401, '아이디/이메일 또는 비밀번호가 잘못되었습니다.');
     }
+
     // 로그인 성공 응답
     sendJsonResponse(200, 'Login successful');
+
     // statement와 연결 종료
     $stmt->close();
     $conn->close();
