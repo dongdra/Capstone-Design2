@@ -4,7 +4,7 @@
 ## 요청
 |HTTP|
 |--|
-| `GET` / `POST` http://{address}:{port}/upload/upload.php |
+| `POST` http://{address}:{port}/upload/upload.php |
 
 #### 요청 바디
 
