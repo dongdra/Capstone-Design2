@@ -1,0 +1,67 @@
+
+## 사용자 파일 전체 출력 API
+
+### 요청
+| **HTTP Method** | **URL** |
+|----------------|---------|
+| `POST`         | http://{address}:{port}/user/selectdb.php |
+
+### 요청 바디
+
+| **필드명**     | **필수 여부** | **타입**  | **설명**                      |
+|----------------|---------------|-----------|-------------------------------|
+| `identifier`   | `Y`           | `String`  | 사용자 아이디 또는 이메일       |
+| `password`     | `Y`           | `String`  | 사용자 비밀번호                |
+
+### 응답
+
+#### 응답 바디
+
+| **필드 이름**  | **데이터 타입** | **설명**                   |
+|----------------|-----------------|----------------------------|
+| `StatusCode`   | `Int`            | 상태 코드                   |
+| `message`      | `String`         | 응답 메시지                 |
+
+### 요청 예시
+
+```url
+http://{address}:{port}/user/selectdb.php
+```
+
+```json
+{
+    "identifier": "user@example.com",
+    "password": "yourpassword",
+    "file_base64": "data:application/pdf;base64,...",
+    "filename": "example.pdf"
+}
+```
+
+### 응답 예시
+
+```json
+{
+   "StatusCode": 200,
+   "message": "Upload successful"
+}
+```
+
+### 오류 응답
+
+#### 아이디(이메일) 또는 비밀번호 미입력
+
+```json
+{
+   "StatusCode": 400,
+   "message": "아이디/이메일과 비밀번호를 모두 입력해야 합니다."
+}
+```
+
+#### 사용자 존재 안함 / 아이디(이메일) 및 비밀번호 불일치
+
+```json
+{
+   "StatusCode": 401,
+   "message": "아이디/이메일 또는 비밀번호가 잘못되었습니다."
+}
+```
