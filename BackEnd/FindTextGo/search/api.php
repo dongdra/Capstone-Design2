@@ -86,22 +86,14 @@ try {
     $params = [$user_id];
     $types = 'i';
 
-    if ($searchTerm) {
-        // 검색어가 있으면 OCR 데이터 검색
-        $ocrSql = "SELECT ocr_id, file_id, page_number, extracted_text, coord_x, coord_y, coord_width, coord_height 
-                   FROM ocr_data 
-                   WHERE file_id IN (SELECT file_id FROM file_uploads WHERE user_id = ?) 
-                   AND extracted_text LIKE CONCAT('%', ?, '%')";
-        $params[] = $searchTerm;
-        $types .= 's';
-    } else {
-        // 태그만 있는 경우 처리 (예: filetype:pdf)
-        if (preg_match('/filetype:([\w,]+)/', $searchTerm, $matches)) {
-            $fileTypes = explode(',', $matches[1]);
-            $conditions[] = "fi.file_extension IN (" . implode(',', array_fill(0, count($fileTypes), '?')) . ")";
-            $params = array_merge($params, $fileTypes);
-            $types .= str_repeat('s', count($fileTypes));
-        }
+    // 날짜 필터 처리 (upload:YYYYMMDD 또는 upload:YYYYMMDD-YYYYMMDD)
+    if (preg_match('/upload:(\d{8})(?:-(\d{8}))?/', $searchTerm, $matches)) {
+        $startDate = $matches[1]; // 시작 날짜
+        $endDate = $matches[2] ?? $startDate; // 종료 날짜가 없으면 시작 날짜와 동일하게 설정
+        $conditions[] = "DATE(fu.upload_date) BETWEEN ? AND ?"; // SQL 날짜 범위 조건 추가
+        $params[] = $startDate;
+        $params[] = $endDate;
+        $types .= 'ss'; // 두 개의 문자열 파라미터 추가
     }
 
     if ($conditions) {
@@ -140,7 +132,7 @@ try {
 
     // 검색 결과가 없을 경우
     if (empty($fileData)) {
-        sendJsonResponse(200, '검색 결과가 없습니다.');
+        sendJsonResponse(404, '검색 결과가 없습니다.');
     }
 
     // 결과 응답
