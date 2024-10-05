@@ -43,7 +43,7 @@ try {
     // 변수 설정
     $identifier = trim($data['identifier'] ?? ''); // 아이디 또는 이메일
     $password = trim($data['password'] ?? '');
-    $searchTerm = trim($data['search_term'] ?? ''); // 검색어 (태그 없는 경우)
+    $searchTerm = trim($data['search_term'] ?? ''); // 검색어가 없으면 빈 문자열로 설정
     
     // 필수 입력값 확인
     if (!$identifier || !$password) {
@@ -60,12 +60,20 @@ try {
     $stmt->execute();
     $result = $stmt->get_result();
 
-    if ($result->num_rows === 0 || !password_verify($password, $result->fetch_assoc()['password'])) {
+    if ($result->num_rows === 0) {
+        sendJsonResponse(401, '아이디/이메일 또는 비밀번호가 잘못되었습니다.');
+    }
+
+    // 사용자 정보 가져오기
+    $user = $result->fetch_assoc();
+
+    // 비밀번호 확인
+    if (!password_verify($password, $user['password'])) {
         sendJsonResponse(401, '아이디/이메일 또는 비밀번호가 잘못되었습니다.');
     }
 
     // 사용자 ID 가져오기
-    $user_id = $result->fetch_assoc()['user_id'];
+    $user_id = $user['user_id'];
 
     // 기본 파일 정보 쿼리
     $fileSql = "SELECT fu.file_id, fu.file_name, fi.file_extension, fi.pdf_page_count, fi.file_size, fu.upload_date 
@@ -79,7 +87,7 @@ try {
     $types = 'i';
 
     if ($searchTerm) {
-        // 태그가 없는 경우 OCR 데이터 검색
+        // 검색어가 있으면 OCR 데이터 검색
         $ocrSql = "SELECT ocr_id, file_id, page_number, extracted_text, coord_x, coord_y, coord_width, coord_height 
                    FROM ocr_data 
                    WHERE file_id IN (SELECT file_id FROM file_uploads WHERE user_id = ?) 
@@ -87,14 +95,13 @@ try {
         $params[] = $searchTerm;
         $types .= 's';
     } else {
-        // 태그만 있는 경우
-        if (preg_match('/filetype:([\w,]+)/', $data['search_term'], $matches)) {
+        // 태그만 있는 경우 처리 (예: filetype:pdf)
+        if (preg_match('/filetype:([\w,]+)/', $searchTerm, $matches)) {
             $fileTypes = explode(',', $matches[1]);
             $conditions[] = "fi.file_extension IN (" . implode(',', array_fill(0, count($fileTypes), '?')) . ")";
             $params = array_merge($params, $fileTypes);
             $types .= str_repeat('s', count($fileTypes));
         }
-        // 추가 조건 예시: 페이지 수, 크기 필터 등을 추가 가능
     }
 
     if ($conditions) {
@@ -102,6 +109,11 @@ try {
     }
 
     $fileStmt = $conn->prepare($fileSql);
+    if (!$fileStmt) {
+        throw new Exception('Failed to prepare statement: ' . $conn->error);
+    }
+
+    // 바인딩 변수의 수를 맞춰 bind_param 호출
     $fileStmt->bind_param($types, ...$params);
     $fileStmt->execute();
     $fileResult = $fileStmt->get_result();
