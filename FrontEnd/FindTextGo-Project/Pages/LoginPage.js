@@ -27,9 +27,11 @@ const styles = StyleSheet.create({
 	input: {
 		marginBottom: 16,
 	},
-	button: {
-		marginTop: 16,
-		backgroundColor: "#1e90ff",
+	loginbutton: {
+		marginTop: 16, 
+		backgroundColor: '#536ed9',
+		paddingVertical: 10,
+		borderRadius: 10
 	},
 	footerText: {
 		fontSize: 14,
@@ -121,7 +123,7 @@ export default function LoginPage({ onLogin, storedCredentials }) {
 						}
 					/>
 
-					<Button mode="contained" onPress={handleLogin} style={styles.button}>
+					<Button mode="contained" onPress={handleLogin} labelStyle={{ fontSize: 16 }} style={styles.loginbutton}>
 						로그인
 					</Button>
 
@@ -133,8 +135,6 @@ export default function LoginPage({ onLogin, storedCredentials }) {
 					</Paragraph>
 				</Card.Content>
 			</Card>
-
-			{/* 회원가입 모달 */}
 			<SignupModal visible={isSignupVisible} onDismiss={() => setSignupVisible(false)} />
 		</View>
 	);

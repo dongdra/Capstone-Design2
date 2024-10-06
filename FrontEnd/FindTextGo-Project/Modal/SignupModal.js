@@ -21,8 +21,9 @@ const styles = StyleSheet.create({
     right: 10,            
   },
   closeButtonText: {
-    fontSize: 18,
+    fontSize: 22,
     color: '#333',
+    marginRight: 6
   },
 });
 

@@ -1,9 +1,8 @@
 // Home.js
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { MaterialIcons } from '@expo/vector-icons';
+import { AntDesign } from '@expo/vector-icons'; // AntDesign 아이콘 추가
 import { Platform } from 'react-native'; // 추가
-import UploadScreen from './UploadScreen';
 import HomeScreen from './HomeScreen';
 import ProfileScreen from './ProfileScreen';
 import SettingsScreen from './SettingsScreen';
@@ -17,16 +16,14 @@ export default function Home({ onLogout }) {
       screenOptions={({ route }) => ({
         tabBarIcon: ({ color, size }) => {
           let iconName;
-          if (route.name === 'Upload') {
-            iconName = 'file-upload';
-          } else if (route.name === 'Home') {
-            iconName = 'home';
+          if (route.name === 'Home') {
+            iconName = 'home'; // AntDesign에서 home 아이콘 사용
           } else if (route.name === 'Profile') {
-            iconName = 'account-circle';
+            iconName = 'user'; // AntDesign에서 user 아이콘 사용
           } else if (route.name === 'Settings') {
-            iconName = 'settings';
+            iconName = 'setting'; // AntDesign에서 setting 아이콘 사용
           }
-          return <MaterialIcons name={iconName} size={size} color={color} />;
+          return <AntDesign name={iconName} size={size} color={color} />; // AntDesign으로 변경
         },
         tabBarActiveTintColor: 'black',
         tabBarInactiveTintColor: 'gray',
@@ -34,13 +31,12 @@ export default function Home({ onLogout }) {
           height: Platform.OS === 'android' ? 50 : 75, 
           backgroundColor: '#ffffff',
           borderTopWidth: 1,
-          borderTopColor: 'black',
+          borderTopColor: '#E6E6E6',
         },
       })}
     >
-      <Tab.Screen name="Upload" component={UploadScreen} options={{ tabBarLabel: '파일 업로드' }} />
-      <Tab.Screen name="Home" component={HomeScreen} options={{ tabBarLabel: '홈' }} />
       <Tab.Screen name="Profile" component={ProfileScreen} options={{ tabBarLabel: '프로필' }} />
+      <Tab.Screen name="Home" component={HomeScreen} options={{ tabBarLabel: '홈' }} />     
       <Tab.Screen name="Settings">
         {() => <SettingsScreen onLogout={onLogout} />}
       </Tab.Screen>

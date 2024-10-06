@@ -43,12 +43,13 @@ export default function App() {
     setIsLoggedIn(true);   // 로그인 상태로 전환
   };
 
-  // 사용자가 로그아웃하면 호출되는 함수
-  const handleLogout = async () => {
-    await SecureStore.deleteItemAsync('identifier');
-    await SecureStore.deleteItemAsync('password');
-    setIsLoggedIn(false);   // 로그아웃 상태로 전환
-  };
+// 사용자가 로그아웃하면 호출되는 함수
+const handleLogout = async () => {
+  await SecureStore.deleteItemAsync('identifier');
+  await SecureStore.deleteItemAsync('password');
+  setStoredCredentials(null);  // 자격증명을 초기화
+  setIsLoggedIn(false);   // 로그아웃 상태로 전환
+};
 
   // 데이터를 불러오는 동안 보여줄 로딩 화면
   if (loading) {

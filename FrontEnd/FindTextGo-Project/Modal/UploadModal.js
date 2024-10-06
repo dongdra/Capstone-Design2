@@ -1,9 +1,11 @@
 // UploadModal.js
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Modal, Button, Text, Portal } from 'react-native-paper';
-import { StyleSheet, View, TouchableOpacity } from 'react-native';
+import { StyleSheet, View, TouchableOpacity, Alert } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import { MaterialIcons } from '@expo/vector-icons';
+import * as SecureStore from 'expo-secure-store';
+import { API_BASE_URL } from '@env'; // .env에서 API_BASE_URL 불러오기
 
 const styles = StyleSheet.create({
   modalContent: {
@@ -81,6 +83,7 @@ const styles = StyleSheet.create({
 const UploadModal = ({ visible, hideModal }) => {
   const [errorMessage, setErrorMessage] = useState('');
   const [selectedFile, setSelectedFile] = useState(null);
+  const [credentials, setCredentials] = useState({ identifier: '', password: '' });
 
   // 허용하는 파일 형식 (이미지 제외)
   const allowedFileTypes = [
@@ -91,6 +94,16 @@ const UploadModal = ({ visible, hideModal }) => {
     'application/zip',
   ];
 
+  // 자격증명 불러오기
+  useEffect(() => {
+    const fetchCredentials = async () => {
+      const identifier = await SecureStore.getItemAsync('identifier');
+      const password = await SecureStore.getItemAsync('password');
+      setCredentials({ identifier, password });
+    };
+    fetchCredentials();
+  }, []);
+
   // 파일 선택 핸들러
   const pickDocument = async () => {
     try {
@@ -98,11 +111,12 @@ const UploadModal = ({ visible, hideModal }) => {
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
         const file = result.assets[0];
-        const { name, mimeType } = file;
+        const { name, mimeType, uri } = file;
 
         // 허용된 파일 형식인지 확인
         if (allowedFileTypes.includes(mimeType)) {
-          setSelectedFile({ name, mimeType });
+          const fileBase64 = await convertToBase64(uri);
+          setSelectedFile({ name, mimeType, fileBase64 });
           setErrorMessage(''); // 오류 메시지 초기화
         } else {
           setErrorMessage('PDF, Word, 한글(HWP), ZIP 파일만 업로드할 수 있습니다.');
@@ -114,6 +128,80 @@ const UploadModal = ({ visible, hideModal }) => {
     } catch (err) {
       console.error('파일 선택 실패:', err);
       setErrorMessage('파일 선택에 실패했습니다. 다시 시도해주세요.');
+    }
+  };
+
+  // 파일을 Base64로 변환하는 함수
+  // 파일을 Base64로 변환하는 함수
+const convertToBase64 = async (uri) => {
+  try {
+    const response = await fetch(uri);
+    const blob = await response.blob();
+    
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64Data = reader.result.split(',')[1]; // Base64 부분만 추출
+        console.log("Base64 변환 완료:", base64Data.slice(0, 50) + '...'); // 첫 50자만 로그에 출력
+        resolve(base64Data);
+      };
+      reader.onerror = (error) => {
+        console.error("Base64 변환 실패:", error);
+        reject(error);
+      };
+      reader.readAsDataURL(blob);
+    });
+  } catch (error) {
+    console.error("파일을 Base64로 변환 중 오류 발생:", error);
+    throw error;
+  }
+};
+
+
+  // 파일 업로드 핸들러
+  const handleFileUpload = async () => {
+    if (!credentials.identifier || !credentials.password) {
+      setErrorMessage('로그인 정보를 불러올 수 없습니다.');
+      return;
+    }
+
+    // 파일 업로드에 필요한 데이터
+    const uploadData = {
+      identifier: credentials.identifier,
+      password: credentials.password,
+      file_base64: selectedFile.fileBase64,
+      filename: selectedFile.name || 'noname.pdf',
+    };
+
+    // 전송할 데이터 확인용 console.log
+    console.log("파일 업로드 전송 데이터:", JSON.stringify(uploadData));
+
+    try {
+      // fetch로 POST 요청 보내기
+      const response = await fetch(`${API_BASE_URL}/upload/upload.php`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(uploadData),
+      });
+
+      const data = await response.json(); // 서버로부터 받은 JSON 데이터를 처리
+
+      // 서버 응답을 콘솔에 출력
+      console.log("서버 응답 데이터:", data.StatusCode);
+
+      if (data.StatusCode === 200) { // 업로드 성공 시 처리
+        console.log('파일 업로드 성공:', data.message);
+        Alert.alert('성공', '파일이 성공적으로 업로드되었습니다.');
+        hideModal(); 
+      } else {
+        console.log('파일 업로드 성공:', data.message);
+        Alert.alert('업로드 실패', '파일 업로드에 실패했습니다.');
+      }
+    } catch (error) {
+      console.error("파일 업로드 실패:", error);
+      Alert.alert("업로드 실패", "파일 업로드 중 오류가 발생했습니다. 다시 시도해 주세요.");
     }
   };
 
@@ -158,7 +246,7 @@ const UploadModal = ({ visible, hideModal }) => {
           </Button>
           <Button
             mode="contained"
-            onPress={() => console.log('File uploaded')}
+            onPress={handleFileUpload} // 파일 업로드 처리
             style={styles.uploadButton}
             disabled={!selectedFile} // 파일이 없을 경우 버튼 비활성화
           >
@@ -171,4 +259,5 @@ const UploadModal = ({ visible, hideModal }) => {
 };
 
 export default UploadModal;
+
 

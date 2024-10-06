@@ -23,14 +23,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     backgroundColor: '#fff',
   },
-  button: {
-    marginTop: 30,
+  logoutbutton: {
     width: '100%',
     justifyContent: 'center',
-    backgroundColor: '#6200ee',
-  },
-  buttonLabel: {
-    color: '#fff',
+    backgroundColor: '#d95e53',
+    paddingVertical: 10,
+    borderRadius: 10,
   },
   divider: {
     width: '100%',
@@ -46,11 +44,17 @@ const styles = StyleSheet.create({
 const SettingsScreen = ({ onLogout }) => {
   const [isNotificationsEnabled, setIsNotificationsEnabled] = React.useState(false);
   const [isAutoLoginEnabled, setIsAutoLoginEnabled] = React.useState(false);
-  const [isDarkThemeEnabled, setIsDarkThemeEnabled] = React.useState(false); // 앱 테마 변경용 스위치 상태
+  const [isDarkThemeEnabled, setIsDarkThemeEnabled] = React.useState(false);
 
   const toggleNotifications = () => setIsNotificationsEnabled(!isNotificationsEnabled);
-  const toggleAutoLogin = () => setIsAutoLoginEnabled(!isAutoLoginEnabled);
-  const toggleDarkTheme = () => setIsDarkThemeEnabled(!isDarkThemeEnabled); // 테마 변경 스위치 핸들러
+  const toggleAutoLogin = async () => {
+    setIsAutoLoginEnabled(!isAutoLoginEnabled);
+    if (!isAutoLoginEnabled) {
+      await SecureStore.deleteItemAsync('identifier');
+      await SecureStore.deleteItemAsync('password');
+    }
+  };
+  const toggleDarkTheme = () => setIsDarkThemeEnabled(!isDarkThemeEnabled);
 
   const handleLogout = () => {
     Alert.alert('로그아웃', '성공적으로 로그아웃되었습니다.', [
@@ -115,8 +119,8 @@ const SettingsScreen = ({ onLogout }) => {
         <Button
           mode="contained"
           onPress={handleLogout}
-          style={styles.button}
-          labelStyle={styles.buttonLabel}
+          style={styles.logoutbutton}
+          labelStyle={{ fontSize: 16 }}
         >
           로그아웃
         </Button>
