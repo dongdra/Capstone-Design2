@@ -75,27 +75,94 @@ try {
     // 사용자 ID 가져오기
     $user_id = $user['user_id'];
 
-    // 기본 파일 정보 쿼리
+    // OCR 검색어 필터 처리
+    if (!preg_match('/filetype:\w+|pages>\d+/', $searchTerm) && !empty($searchTerm)) {
+        // OCR 테이블에서 검색
+        $ocrSearchTerm = '%' . $searchTerm . '%';
+        $ocrSql = "SELECT od.file_id, od.page_number, od.extracted_text, od.coord_x, od.coord_y, od.coord_width, od.coord_height, 
+                          fu.file_name, fi.file_extension, fi.pdf_page_count, fi.file_size, fu.upload_date 
+                    FROM ocr_data od
+                    JOIN file_uploads fu ON od.file_id = fu.file_id
+                    JOIN file_info fi ON fu.file_id = fi.file_id
+                    WHERE fu.user_id = ? AND od.extracted_text LIKE ?";
+
+        $ocrStmt = $conn->prepare($ocrSql);
+        if (!$ocrStmt) {
+            throw new Exception('Failed to prepare OCR statement: ' . $conn->error);
+        }
+
+        $ocrStmt->bind_param('is', $user_id, $ocrSearchTerm);
+        $ocrStmt->execute();
+        $ocrResult = $ocrStmt->get_result();
+
+        // OCR 검색 결과 처리
+        $fileData = [];
+        while ($ocrRow = $ocrResult->fetch_assoc()) {
+            $fileId = $ocrRow['file_id'];
+            $pageNumber = $ocrRow['page_number'];
+            $pageImagePath = "../documents/$fileId/webp/$pageNumber.webp";
+
+            // 페이지 이미지 처리
+            $pageImageBase64 = file_exists($pageImagePath) ? base64_encode(file_get_contents($pageImagePath)) : null;
+
+            // 문서 정보 및 OCR 영역 정보 추가
+            $fileData[] = [
+                'file_name' => $ocrRow['file_name'],
+                'file_extension' => $ocrRow['file_extension'],
+                'pdf_page_count' => $ocrRow['pdf_page_count'],
+                'file_size' => $ocrRow['file_size'],
+                'upload_date' => $ocrRow['upload_date'],
+                'page_number' => $ocrRow['page_number'],
+                'page_image' => $pageImageBase64, // 해당 페이지 이미지
+                'ocr_text' => $ocrRow['extracted_text'],
+                'coordinates' => [
+                    'coord_x' => $ocrRow['coord_x'],
+                    'coord_y' => $ocrRow['coord_y'],
+                    'coord_width' => $ocrRow['coord_width'],
+                    'coord_height' => $ocrRow['coord_height'],
+                ]
+            ];
+        }
+
+        // OCR 검색 결과가 없으면 검색 결과 없음을 반환하고 종료
+        if (empty($fileData)) {
+            sendJsonResponse(404, '검색 결과가 없습니다.');
+        }
+
+        // OCR 검색 결과가 있으면 바로 응답
+        sendJsonResponse(200, 'OCR 검색 성공', $fileData);
+
+        $ocrStmt->close();
+    }
+
+    // 기본 파일 정보 쿼리 처리 (필터 적용 시)
     $fileSql = "SELECT fu.file_id, fu.file_name, fi.file_extension, fi.pdf_page_count, fi.file_size, fu.upload_date 
                 FROM file_uploads fu
                 JOIN file_info fi ON fu.file_id = fi.file_id
                 WHERE fu.user_id = ?";
-    
+
     // 조건 필터링
     $conditions = [];
     $params = [$user_id];
     $types = 'i';
 
-    // 날짜 필터 처리 (upload:YYYYMMDD 또는 upload:YYYYMMDD-YYYYMMDD)
-    if (preg_match('/upload:(\d{8})(?:-(\d{8}))?/', $searchTerm, $matches)) {
-        $startDate = $matches[1]; // 시작 날짜
-        $endDate = $matches[2] ?? $startDate; // 종료 날짜가 없으면 시작 날짜와 동일하게 설정
-        $conditions[] = "DATE(fu.upload_date) BETWEEN ? AND ?"; // SQL 날짜 범위 조건 추가
-        $params[] = $startDate;
-        $params[] = $endDate;
-        $types .= 'ss'; // 두 개의 문자열 파라미터 추가
+    // 파일 형식 필터 처리 (filetype:pdf)
+    if (preg_match('/filetype:(\w+)/', $searchTerm, $matches)) {
+        $fileType = $matches[1];
+        $conditions[] = "fi.file_extension = ?";
+        $params[] = $fileType;
+        $types .= 's'; // 문자열 파라미터 추가
     }
 
+    // 페이지 수 필터 처리 (pages>15)
+    if (preg_match('/pages>(\d+)/', $searchTerm, $matches)) {
+        $minPages = $matches[1];
+        $conditions[] = "fi.pdf_page_count > ?";
+        $params[] = $minPages;
+        $types .= 'i'; // 정수 파라미터 추가
+    }
+
+    // 기존 파일 업로드 정보에서 조건 필터 처리
     if ($conditions) {
         $fileSql .= " AND " . implode(' AND ', $conditions);
     }
@@ -106,7 +173,9 @@ try {
     }
 
     // 바인딩 변수의 수를 맞춰 bind_param 호출
-    $fileStmt->bind_param($types, ...$params);
+    if ($types) {
+        $fileStmt->bind_param($types, ...$params);
+    }
     $fileStmt->execute();
     $fileResult = $fileStmt->get_result();
 
