@@ -1,11 +1,22 @@
-// HomeScreen.js
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet } from 'react-native';
-import { FAB, Provider, TextInput, Button } from 'react-native-paper';
+import { View, StyleSheet, TextInput, ScrollView, ActivityIndicator } from 'react-native';
+import { FAB, Provider, TouchableRipple, Chip } from 'react-native-paper';
+import { AntDesign } from '@expo/vector-icons';
 import UploadModal from '../Modal/UploadModal';
 import DocumentList from './DocumentList';
 import * as SecureStore from 'expo-secure-store';
-import { API_BASE_URL } from '@env'; 
+import { API_BASE_URL } from '@env';
+
+// 파일 크기 변환 함수
+const formatFileSize = (bytes) => {
+  if (bytes === 0) return '0 Bytes';
+
+  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(1024));
+  const fileSize = parseFloat((bytes / Math.pow(1024, i)).toFixed(2));
+
+  return `${fileSize} ${sizes[i]}`;
+};
 
 const styles = StyleSheet.create({
   container: {
@@ -16,16 +27,57 @@ const styles = StyleSheet.create({
   searchBarContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 15,
+    marginBottom: 25,
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 5,
+    paddingHorizontal: 10,
+  },
+  searchIconContainer: {
+    borderRadius: 100,
+    width: 48,
+    height: 48,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  searchIcon: {
+    marginLeft: 8,
+    marginRight: 8,
   },
   searchBar: {
     flex: 1,
-    marginRight: 10,
+    height: 55,
+    backgroundColor: 'transparent',
+    paddingLeft: 8,
   },
-  searchButton: {
-    backgroundColor: '#536ed9',
-    paddingVertical: 10,
-    borderRadius: 10,
+  tagContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap'
+  },
+  chip: {
+    backgroundColor: '#1e90ff',
+    borderColor: '#1e90ff',
+    borderWidth: 1,
+    borderRadius: 25,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
+    marginBottom: 20,
+    paddingHorizontal: 15,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 2,
+    elevation: 4,
+  },
+  chipText: {
+    color: '#ffffff',
+    fontSize: 16
   },
   buttonContainer: {
     position: 'absolute',
@@ -34,30 +86,39 @@ const styles = StyleSheet.create({
   },
 });
 
-// 파일 크기 변환 함수
-const formatFileSize = (bytes) => {
-  if (bytes === 0) return '0 Bytes';
-  
-  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(1024));
-  const fileSize = parseFloat((bytes / Math.pow(1024, i)).toFixed(2));
-  
-  return `${fileSize} ${sizes[i]}`;
-};
-
 async function getCredentials() {
   const identifier = await SecureStore.getItemAsync('identifier');
   const password = await SecureStore.getItemAsync('password');
   return { identifier, password };
 }
 
+const parseSearchTerm = (searchTerm) => {
+  const conditions = {};
+  const regex = /(\w+):([^\s]+)/g;
+  let match;
+
+  while ((match = regex.exec(searchTerm)) !== null) {
+    const key = match[1].toLowerCase();
+    const value = match[2];
+    conditions[key] = value;
+  }
+
+  const textSearch = searchTerm.replace(regex, '').trim();
+  if (textSearch) {
+    conditions.ocr_text = textSearch;
+  }
+
+  return conditions;
+};
+
 async function fetchDocuments(searchTerm) {
   const { identifier, password } = await getCredentials();
+  const searchConditions = parseSearchTerm(searchTerm);
 
   const searchData = {
     identifier: identifier,
     password: password,
-    search_term: searchTerm,
+    ...searchConditions,
   };
 
   try {
@@ -73,9 +134,7 @@ async function fetchDocuments(searchTerm) {
 
     if (data.StatusCode === 200) {
       return data.data;
-    } 
-    else 
-    {
+    } else {
       return [];
     }
   } catch (error) {
@@ -94,19 +153,23 @@ const HomeScreen = () => {
     if (fetchedDocuments && fetchedDocuments.length > 0) {
       const formattedData = fetchedDocuments.map((doc, index) => {
         const formattedSize = formatFileSize(doc.file_size);
-        console.log('Original file size:', doc.file_size); // 원래 파일 크기 출력
-        console.log('Formatted file size:', formattedSize); // 변환된 파일 크기 출력
+        let thumbnail = null;
+
+        if (doc.first_page_image) {
+          thumbnail = `data:image/jpeg;base64,${doc.first_page_image}`;
+        } else if (doc.page_image) {
+          thumbnail = `data:image/jpeg;base64,${doc.page_image}`;
+        }
 
         return {
           id: index.toString(),
           title: doc.file_name,
-          extenstion: doc.file_extension,
-          content: formattedSize, 
-          thumbnail: doc.first_page_image
-            ? `data:image/jpeg;base64,${doc.first_page_image}`
-            : null,
+          extension: doc.file_extension,
+          content: formattedSize,
+          thumbnail: thumbnail,
           pages: doc.pdf_page_count,
-          uploaddate: doc.upload_date
+          uploaddate: doc.upload_date,
+          pageNumber: doc.page_number || null,
         };
       });
       setDocuments(formattedData);
@@ -117,9 +180,27 @@ const HomeScreen = () => {
 
   const handleSearch = async () => {
     setIsSearching(true);
-    const fetchedDocuments = await fetchDocuments(searchTerm); // 검색어 포함
+    const fetchedDocuments = await fetchDocuments(searchTerm);
     formatDocuments(fetchedDocuments);
     setIsSearching(false);
+  };
+
+  useEffect(() => {
+    const fetchData = async () => {
+      await handleSearch();
+    };
+
+    fetchData();
+  }, []);
+
+  const addTagToSearch = (tag) => {
+    setSearchTerm((prev) => {
+      const tagText = `${tag} `;
+      if (!prev.includes(tagText)) {
+        return `${prev}${tagText}`.trim();
+      }
+      return prev;
+    });
   };
 
   const showModal = (modalType) => setVisibleModal(modalType);
@@ -129,24 +210,42 @@ const HomeScreen = () => {
     <Provider>
       <View style={styles.container}>
         <View style={styles.searchBarContainer}>
+          <TouchableRipple
+            onPress={isSearching ? null : handleSearch} // 검색 중일 땐 클릭 불가
+            rippleColor="rgba(0, 0, 0, .32)"
+            borderless={true}
+            style={styles.searchIconContainer}
+          >
+            <AntDesign
+              name="search1"
+              size={20}
+              color={isSearching ? 'lightgray' : 'gray'} // 검색 중일 때 색상 변경
+              style={styles.searchIcon}
+            />
+          </TouchableRipple>
           <TextInput
             style={styles.searchBar}
             placeholder="검색어를 입력하세요"
             value={searchTerm}
-            onChangeText={setSearchTerm}
-            mode="outlined"
+            onChangeText={(text) => setSearchTerm(text)} // 검색어 상태 업데이트
+            underlineColorAndroid="transparent"
+            placeholderTextColor="#999"
           />
-          <Button
-            mode="contained"
-            style={styles.searchButton}
-            onPress={handleSearch}
-            loading={isSearching}
-            disabled={isSearching}
-          >
-            검색
-          </Button>
         </View>
-        <DocumentList documents={documents} />
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tagContainer}>
+          <Chip style={styles.chip} textStyle={styles.chipText} onPress={() => addTagToSearch('upload:20240101')}>upload:20240101</Chip>
+          <Chip style={styles.chip} textStyle={styles.chipText} onPress={() => addTagToSearch('filetype:pdf')}>filetype:pdf</Chip>
+          <Chip style={styles.chip} textStyle={styles.chipText} onPress={() => addTagToSearch('pages:>15')}>pages:&gt;15</Chip>
+          <Chip style={styles.chip} textStyle={styles.chipText} onPress={() => addTagToSearch('size:<5MB')}>size:&lt;5MB</Chip>
+          <Chip style={styles.chip} textStyle={styles.chipText} onPress={() => addTagToSearch('filename:report')}>filename:report</Chip>
+        </ScrollView>
+
+        {isSearching ? (
+          <ActivityIndicator size="large" color="#1e90ff" />
+        ) : (
+          <DocumentList documents={documents} />
+        )}
+        
         <UploadModal visible={visibleModal === 'upload'} hideModal={hideModal} />
         <FAB.Group
           open={open}
@@ -156,7 +255,7 @@ const HomeScreen = () => {
               icon: 'upload',
               label: '파일 업로드',
               onPress: () => showModal('upload'),
-            }
+            },
           ]}
           onStateChange={({ open }) => setOpen(open)}
         />

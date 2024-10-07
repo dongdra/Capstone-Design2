@@ -132,7 +132,6 @@ const UploadModal = ({ visible, hideModal }) => {
   };
 
   // 파일을 Base64로 변환하는 함수
-  // 파일을 Base64로 변환하는 함수
 const convertToBase64 = async (uri) => {
   try {
     const response = await fetch(uri);
@@ -159,51 +158,61 @@ const convertToBase64 = async (uri) => {
 
 
   // 파일 업로드 핸들러
-  const handleFileUpload = async () => {
-    if (!credentials.identifier || !credentials.password) {
-      setErrorMessage('로그인 정보를 불러올 수 없습니다.');
-      return;
-    }
+const handleFileUpload = async () => {
+  if (!credentials.identifier || !credentials.password) {
+    setErrorMessage('로그인 정보를 불러올 수 없습니다.');
+    return;
+  }
 
-    // 파일 업로드에 필요한 데이터
-    const uploadData = {
-      identifier: credentials.identifier,
-      password: credentials.password,
-      file_base64: selectedFile.fileBase64,
-      filename: selectedFile.name || 'noname.pdf',
-    };
+  // 파일 업로드에 필요한 데이터
+  const uploadData = {
+    identifier: credentials.identifier,
+    password: credentials.password,
+    file_base64: selectedFile.fileBase64,
+    filename: selectedFile.name || 'noname.pdf',
+  };
 
-    // 전송할 데이터 확인용 console.log
-    console.log("파일 업로드 전송 데이터:", JSON.stringify(uploadData));
+  // 전송할 데이터 확인용 console.log
+  console.log("파일 업로드 전송 데이터:", JSON.stringify(uploadData));
 
+  try {
+    // fetch로 POST 요청 보내기
+    const response = await fetch(`${API_BASE_URL}/upload/upload.php`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(uploadData),
+    });
+
+    const responseData = await response.text(); // 응답을 텍스트 형식으로 읽기
+    console.log("서버 응답 데이터:", responseData); // 서버 응답을 텍스트로 출력
+
+    // 서버 응답을 JSON으로 파싱하고 상태 코드를 확인
     try {
-      // fetch로 POST 요청 보내기
-      const response = await fetch(`${API_BASE_URL}/upload/upload.php`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(uploadData),
-      });
-
-      const data = await response.json(); // 서버로부터 받은 JSON 데이터를 처리
-
-      // 서버 응답을 콘솔에 출력
-      console.log("서버 응답 데이터:", data.StatusCode);
+      const data = JSON.parse(responseData);
+      console.log("서버 응답 JSON 데이터:", data);
 
       if (data.StatusCode === 200) { // 업로드 성공 시 처리
         console.log('파일 업로드 성공:', data.message);
         Alert.alert('성공', '파일이 성공적으로 업로드되었습니다.');
-        hideModal(); 
+        setSelectedFile(null);
+        hideModal();
       } else {
-        console.log('파일 업로드 성공:', data.message);
+        console.log('파일 업로드 실패:', data.message);
         Alert.alert('업로드 실패', '파일 업로드에 실패했습니다.');
       }
-    } catch (error) {
-      console.error("파일 업로드 실패:", error);
-      Alert.alert("업로드 실패", "파일 업로드 중 오류가 발생했습니다. 다시 시도해 주세요.");
+    } catch (jsonError) {
+      console.error('JSON 파싱 오류:', jsonError);
+      console.error('서버 응답 데이터가 JSON 형식이 아닙니다:', responseData);
+      Alert.alert('서버 오류', '서버로부터 예상치 못한 응답을 받았습니다.');
     }
-  };
+  } catch (error) {
+    console.error("파일 업로드 실패:", error);
+    Alert.alert("업로드 실패", "파일 업로드 중 오류가 발생했습니다. 다시 시도해 주세요.");
+  }
+};
+
 
   // 모달을 닫을 때 상태 초기화
   const handleClose = () => {

@@ -1,7 +1,7 @@
-///DocumentList.js
 import React from 'react';
 import { View, FlatList, Image, Text, TouchableOpacity } from 'react-native';
 import { Card } from 'react-native-paper';
+import { AntDesign } from '@expo/vector-icons'; // 추가된 부분
 
 const styles = {
   card: {
@@ -45,10 +45,22 @@ const styles = {
     justifyContent: 'center',
   },
   cardTitle: {
-    fontSize: 15,
+    fontSize: 19,
     fontWeight: 'bold',
     marginBottom: 8,
     color: '#222',
+  },
+  cardExtensionContainer: {
+    backgroundColor: '#007BFF', // 파란색 배경
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+    alignSelf: 'flex-start',
+  },
+  cardExtensionText: {
+    color: '#fff', // 흰색 글자색
+    fontSize: 14,
+    fontWeight: 'bold',
   },
   infoRow: {
     flexDirection: 'row',
@@ -58,53 +70,54 @@ const styles = {
     borderTopColor: '#eee',
     paddingTop: 10,
   },
-  cardId: {
-    fontSize: 12,
-    color: '#aaa',
-  },
   cardDescription: {
-    fontSize: 12,
+    fontSize: 15,
     color: '#aaa',
   },
-  cardDate:{
+  cardDate: {
+    marginTop: 10,
     fontSize: 12,
     color: '#aaa',
   },
   cardPageInfo: {
-    fontSize: 12,
+    fontSize: 15,
     color: '#aaa',
   },
 };
 
 const DocumentList = ({ documents }) => {
-  const renderItem = ({ item }) => (
-    <TouchableOpacity>
-      <Card style={styles.card}>
-        <View style={styles.contentRow}>
-          <View style={styles.imageContainer}>
-            {item.thumbnail ? (
-              <Image source={{ uri: item.thumbnail }} style={styles.cardImage} />
-            ) : (
-              <View style={styles.defaultImage}>
-                <Text style={styles.defaultImageText}>No Image</Text>
+  const renderItem = ({ item }) => {
+    return (
+      <TouchableOpacity>
+        <Card style={styles.card}>
+          <View style={styles.contentRow}>
+            <View style={styles.imageContainer}>
+              {item.thumbnail ? (
+                <Image source={{ uri: item.thumbnail }} style={styles.cardImage} />
+              ) : (
+                <View style={styles.defaultImage}>
+                  <Text style={styles.defaultImageText}>No Image</Text>
+                </View>
+              )}
+            </View>
+            <View style={styles.contentContainer}>
+              <Text style={styles.cardTitle}>{item.title}</Text>
+              <View style={styles.cardExtensionContainer}>
+                <Text style={styles.cardExtensionText}>{item.extension}</Text>
               </View>
-            )}
+              <Text style={styles.cardDate}>{item.uploaddate}</Text>
+            </View>
           </View>
-          <View style={styles.contentContainer}>
-            <Text style={styles.cardTitle}>{item.title}</Text>     
-            <Text style={styles.cardTitle}>파일 형식: {item.extenstion}</Text>  
-          </View>
-        </View>
 
-        <View style={styles.infoRow}>
-          <Text style={styles.cardId}>ID: {item.id}</Text>
-          <Text style={styles.cardDescription}>파일크기: {item.content}</Text>
-          <Text style={styles.cardDate}>{item.uploaddate}</Text>
-          <Text style={styles.cardPageInfo}>Pages: {item.pages}</Text>
-        </View>
-      </Card>
-    </TouchableOpacity>
-  );
+          <View style={styles.infoRow}>
+            <Text style={styles.cardDescription}>{item.content}</Text>
+            <Text style={styles.cardPageInfo}>{item.pages}P</Text>
+            <AntDesign name="star" size={20} color="#aaa" /> 
+          </View>
+        </Card>
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <FlatList
