@@ -80,22 +80,80 @@ try {
                 FROM file_uploads fu
                 JOIN file_info fi ON fu.file_id = fi.file_id
                 WHERE fu.user_id = ?";
-    
+
     // 조건 필터링
     $conditions = [];
     $params = [$user_id];
     $types = 'i';
 
-    // 날짜 필터 처리 (upload:YYYYMMDD 또는 upload:YYYYMMDD-YYYYMMDD)
-    if (preg_match('/upload:(\d{8})(?:-(\d{8}))?/', $searchTerm, $matches)) {
-        $startDate = $matches[1]; // 시작 날짜
-        $endDate = $matches[2] ?? $startDate; // 종료 날짜가 없으면 시작 날짜와 동일하게 설정
-        $conditions[] = "DATE(fu.upload_date) BETWEEN ? AND ?"; // SQL 날짜 범위 조건 추가
-        $params[] = $startDate;
-        $params[] = $endDate;
-        $types .= 'ss'; // 두 개의 문자열 파라미터 추가
+    // 파일 형식 필터 처리 (filetype:pdf)
+    if (preg_match('/filetype:(\w+)/', $searchTerm, $matches)) {
+        $fileType = $matches[1];
+        $conditions[] = "fi.file_extension = ?";
+        $params[] = $fileType;
+        $types .= 's'; // 문자열 파라미터 추가
     }
 
+    // 페이지 수 필터 처리 (pages>15)
+    if (preg_match('/pages>(\d+)/', $searchTerm, $matches)) {
+        $minPages = $matches[1];
+        $conditions[] = "fi.pdf_page_count > ?";
+        $params[] = $minPages;
+        $types .= 'i'; // 정수 파라미터 추가
+    }
+
+    // OCR 검색어 필터 처리 (예: 인증서)
+    if (!preg_match('/filetype:\w+|pages>\d+/', $searchTerm) && !empty($searchTerm)) {
+        // 검색어가 태그 형식이 아니면 OCR 데이터에서 검색
+        $ocrSql = "SELECT DISTINCT fu.file_id, fu.file_name, fi.file_extension, fi.pdf_page_count, fi.file_size, fu.upload_date 
+                    FROM ocr_data od
+                    JOIN file_uploads fu ON od.file_id = fu.file_id
+                    JOIN file_info fi ON fu.file_id = fi.file_id
+                    WHERE fu.user_id = ? AND od.extracted_text LIKE ?";
+        
+        $ocrSearchTerm = '%' . $searchTerm . '%';
+        $params[] = $ocrSearchTerm;
+        $types .= 's'; // 문자열 파라미터 추가
+        
+        $ocrStmt = $conn->prepare($ocrSql);
+        if (!$ocrStmt) {
+            throw new Exception('Failed to prepare OCR statement: ' . $conn->error);
+        }
+        
+        // 바인딩 변수의 수를 맞춰 bind_param 호출
+        $ocrStmt->bind_param($types, ...$params);
+        $ocrStmt->execute();
+        $ocrResult = $ocrStmt->get_result();
+        
+        // 결과 배열 생성
+        $fileData = [];
+        while ($ocrRow = $ocrResult->fetch_assoc()) {
+            $fileId = $ocrRow['file_id'];
+            $firstPagePath = "../documents/$fileId/webp/1.webp";
+
+            // 첫 페이지 이미지 처리
+            $firstPageBase64 = file_exists($firstPagePath) ? base64_encode(file_get_contents($firstPagePath)) : null;
+
+            // 문서 정보 추가
+            $fileData[] = [
+                'file_name' => $ocrRow['file_name'],
+                'file_extension' => $ocrRow['file_extension'],
+                'pdf_page_count' => $ocrRow['pdf_page_count'],
+                'file_size' => $ocrRow['file_size'],
+                'upload_date' => $ocrRow['upload_date'],
+                'first_page_image' => $firstPageBase64
+            ];
+        }
+
+        // OCR 검색 결과가 있으면 응답
+        if (!empty($fileData)) {
+            sendJsonResponse(200, 'OCR 검색 성공', $fileData);
+        }
+
+        $ocrStmt->close();
+    }
+
+    // 기존 파일 업로드 정보에서 조건 필터 처리
     if ($conditions) {
         $fileSql .= " AND " . implode(' AND ', $conditions);
     }
