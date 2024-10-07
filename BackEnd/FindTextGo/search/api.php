@@ -75,33 +75,6 @@ try {
     // 사용자 ID 가져오기
     $user_id = $user['user_id'];
 
-    // 기본 파일 정보 쿼리
-    $fileSql = "SELECT fu.file_id, fu.file_name, fi.file_extension, fi.pdf_page_count, fi.file_size, fu.upload_date 
-                FROM file_uploads fu
-                JOIN file_info fi ON fu.file_id = fi.file_id
-                WHERE fu.user_id = ?";
-
-    // 조건 필터링
-    $conditions = [];
-    $params = [$user_id];
-    $types = 'i';
-
-    // 파일 형식 필터 처리 (filetype:pdf)
-    if (preg_match('/filetype:(\w+)/', $searchTerm, $matches)) {
-        $fileType = $matches[1];
-        $conditions[] = "fi.file_extension = ?";
-        $params[] = $fileType;
-        $types .= 's'; // 문자열 파라미터 추가
-    }
-
-    // 페이지 수 필터 처리 (pages>15)
-    if (preg_match('/pages>(\d+)/', $searchTerm, $matches)) {
-        $minPages = $matches[1];
-        $conditions[] = "fi.pdf_page_count > ?";
-        $params[] = $minPages;
-        $types .= 'i'; // 정수 파라미터 추가
-    }
-
     // OCR 검색어 필터 처리 (예: 인증서)
     if (!preg_match('/filetype:\w+|pages>\d+/', $searchTerm) && !empty($searchTerm)) {
         // OCR 테이블에서 검색
@@ -141,12 +114,42 @@ try {
             ];
         }
 
-        // OCR 검색 결과가 있으면 응답
-        if (!empty($fileData)) {
-            sendJsonResponse(200, 'OCR 검색 성공', $fileData);
+        // OCR 검색 결과가 없으면 검색 결과 없음을 반환하고 종료
+        if (empty($fileData)) {
+            sendJsonResponse(404, '검색 결과가 없습니다.');
         }
 
+        // OCR 검색 결과가 있으면 바로 응답
+        sendJsonResponse(200, 'OCR 검색 성공', $fileData);
+
         $ocrStmt->close();
+    }
+
+    // 기본 파일 정보 쿼리
+    $fileSql = "SELECT fu.file_id, fu.file_name, fi.file_extension, fi.pdf_page_count, fi.file_size, fu.upload_date 
+                FROM file_uploads fu
+                JOIN file_info fi ON fu.file_id = fi.file_id
+                WHERE fu.user_id = ?";
+
+    // 조건 필터링
+    $conditions = [];
+    $params = [$user_id];
+    $types = 'i';
+
+    // 파일 형식 필터 처리 (filetype:pdf)
+    if (preg_match('/filetype:(\w+)/', $searchTerm, $matches)) {
+        $fileType = $matches[1];
+        $conditions[] = "fi.file_extension = ?";
+        $params[] = $fileType;
+        $types .= 's'; // 문자열 파라미터 추가
+    }
+
+    // 페이지 수 필터 처리 (pages>15)
+    if (preg_match('/pages>(\d+)/', $searchTerm, $matches)) {
+        $minPages = $matches[1];
+        $conditions[] = "fi.pdf_page_count > ?";
+        $params[] = $minPages;
+        $types .= 'i'; // 정수 파라미터 추가
     }
 
     // 기존 파일 업로드 정보에서 조건 필터 처리
