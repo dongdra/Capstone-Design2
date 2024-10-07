@@ -104,28 +104,24 @@ try {
 
     // OCR 검색어 필터 처리 (예: 인증서)
     if (!preg_match('/filetype:\w+|pages>\d+/', $searchTerm) && !empty($searchTerm)) {
-        // 검색어가 태그 형식이 아니면 OCR 데이터에서 검색
+        // OCR 테이블에서 검색
+        $ocrSearchTerm = '%' . $searchTerm . '%';
         $ocrSql = "SELECT DISTINCT fu.file_id, fu.file_name, fi.file_extension, fi.pdf_page_count, fi.file_size, fu.upload_date 
                     FROM ocr_data od
                     JOIN file_uploads fu ON od.file_id = fu.file_id
                     JOIN file_info fi ON fu.file_id = fi.file_id
                     WHERE fu.user_id = ? AND od.extracted_text LIKE ?";
-        
-        $ocrSearchTerm = '%' . $searchTerm . '%';
-        $params[] = $ocrSearchTerm;
-        $types .= 's'; // 문자열 파라미터 추가
-        
+
         $ocrStmt = $conn->prepare($ocrSql);
         if (!$ocrStmt) {
             throw new Exception('Failed to prepare OCR statement: ' . $conn->error);
         }
-        
-        // 바인딩 변수의 수를 맞춰 bind_param 호출
-        $ocrStmt->bind_param($types, ...$params);
+
+        $ocrStmt->bind_param('is', $user_id, $ocrSearchTerm);
         $ocrStmt->execute();
         $ocrResult = $ocrStmt->get_result();
-        
-        // 결과 배열 생성
+
+        // OCR 검색 결과 처리
         $fileData = [];
         while ($ocrRow = $ocrResult->fetch_assoc()) {
             $fileId = $ocrRow['file_id'];
@@ -164,7 +160,9 @@ try {
     }
 
     // 바인딩 변수의 수를 맞춰 bind_param 호출
-    $fileStmt->bind_param($types, ...$params);
+    if ($types) {
+        $fileStmt->bind_param($types, ...$params);
+    }
     $fileStmt->execute();
     $fileResult = $fileStmt->get_result();
 
