@@ -75,11 +75,12 @@ try {
     // 사용자 ID 가져오기
     $user_id = $user['user_id'];
 
-    // OCR 검색어 필터 처리 (예: 인증서)
+    // OCR 검색어 필터 처리
     if (!preg_match('/filetype:\w+|pages>\d+/', $searchTerm) && !empty($searchTerm)) {
         // OCR 테이블에서 검색
         $ocrSearchTerm = '%' . $searchTerm . '%';
-        $ocrSql = "SELECT DISTINCT fu.file_id, fu.file_name, fi.file_extension, fi.pdf_page_count, fi.file_size, fu.upload_date 
+        $ocrSql = "SELECT od.file_id, od.page_number, od.extracted_text, od.coord_x, od.coord_y, od.coord_width, od.coord_height, 
+                          fu.file_name, fi.file_extension, fi.pdf_page_count, fi.file_size, fu.upload_date 
                     FROM ocr_data od
                     JOIN file_uploads fu ON od.file_id = fu.file_id
                     JOIN file_info fi ON fu.file_id = fi.file_id
@@ -98,19 +99,28 @@ try {
         $fileData = [];
         while ($ocrRow = $ocrResult->fetch_assoc()) {
             $fileId = $ocrRow['file_id'];
-            $firstPagePath = "../documents/$fileId/webp/1.webp";
+            $pageNumber = $ocrRow['page_number'];
+            $pageImagePath = "../documents/$fileId/webp/$pageNumber.webp";
 
-            // 첫 페이지 이미지 처리
-            $firstPageBase64 = file_exists($firstPagePath) ? base64_encode(file_get_contents($firstPagePath)) : null;
+            // 페이지 이미지 처리
+            $pageImageBase64 = file_exists($pageImagePath) ? base64_encode(file_get_contents($pageImagePath)) : null;
 
-            // 문서 정보 추가
+            // 문서 정보 및 OCR 영역 정보 추가
             $fileData[] = [
                 'file_name' => $ocrRow['file_name'],
                 'file_extension' => $ocrRow['file_extension'],
                 'pdf_page_count' => $ocrRow['pdf_page_count'],
                 'file_size' => $ocrRow['file_size'],
                 'upload_date' => $ocrRow['upload_date'],
-                'first_page_image' => $firstPageBase64
+                'page_number' => $ocrRow['page_number'],
+                'page_image' => $pageImageBase64, // 해당 페이지 이미지
+                'ocr_text' => $ocrRow['extracted_text'],
+                'coordinates' => [
+                    'coord_x' => $ocrRow['coord_x'],
+                    'coord_y' => $ocrRow['coord_y'],
+                    'coord_width' => $ocrRow['coord_width'],
+                    'coord_height' => $ocrRow['coord_height'],
+                ]
             ];
         }
 
@@ -125,7 +135,7 @@ try {
         $ocrStmt->close();
     }
 
-    // 기본 파일 정보 쿼리
+    // 기본 파일 정보 쿼리 처리 (필터 적용 시)
     $fileSql = "SELECT fu.file_id, fu.file_name, fi.file_extension, fi.pdf_page_count, fi.file_size, fu.upload_date 
                 FROM file_uploads fu
                 JOIN file_info fi ON fu.file_id = fi.file_id
