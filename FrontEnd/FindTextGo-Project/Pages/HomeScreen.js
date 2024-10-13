@@ -1,11 +1,56 @@
+//HomeScreen.js
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, TextInput, ScrollView, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, TextInput, ActivityIndicator, Text, FlatList } from 'react-native';
 import { FAB, Provider, TouchableRipple, Chip } from 'react-native-paper';
-import { AntDesign } from '@expo/vector-icons';
+import { AntDesign, MaterialIcons } from '@expo/vector-icons'; // MaterialIcons 추가
 import UploadModal from '../Modal/UploadModal';
 import DocumentList from './DocumentList';
 import * as SecureStore from 'expo-secure-store';
 import { API_BASE_URL } from '@env';
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    padding: 10,
+    backgroundColor: '#ffffff',
+  },
+  searchBarContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+    backgroundColor: '#fff',
+    elevation: 5,
+    paddingHorizontal: 10,
+  },
+  SearchIcon: {
+    marginLeft: 8,
+    marginRight: 8,
+  },
+  HomeTextInput: {
+    flex: 1,
+    height: 55,
+    backgroundColor: 'transparent',
+    paddingLeft: 8,
+  },
+  FilterForm: {
+    backgroundColor: '#FAFAFA',
+    height: 40,
+    borderColor: '#BDBDBD',
+    borderWidth: 1,
+    borderRadius: 25,
+    marginRight: 8,
+  },
+  FilterText: {
+    color: '#6E6E6E',
+    fontSize: 13
+  }
+});
+
+async function getCredentials() {
+  const identifier = await SecureStore.getItemAsync('identifier');
+  const password = await SecureStore.getItemAsync('password');
+  return { identifier, password };
+}
 
 // 파일 크기 변환 함수
 const formatFileSize = (bytes) => {
@@ -18,107 +63,18 @@ const formatFileSize = (bytes) => {
   return `${fileSize} ${sizes[i]}`;
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 10,
-    backgroundColor: '#f5f5f5',
-  },
-  searchBarContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 25,
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 5,
-    paddingHorizontal: 10,
-  },
-  searchIconContainer: {
-    borderRadius: 100,
-    width: 48,
-    height: 48,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  searchIcon: {
-    marginLeft: 8,
-    marginRight: 8,
-  },
-  searchBar: {
-    flex: 1,
-    height: 55,
-    backgroundColor: 'transparent',
-    paddingLeft: 8,
-  },
-  tagContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap'
-  },
-  chip: {
-    backgroundColor: '#1e90ff',
-    borderColor: '#1e90ff',
-    borderWidth: 1,
-    borderRadius: 25,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 8,
-    marginBottom: 20,
-    paddingHorizontal: 15,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 2,
-    elevation: 4,
-  },
-  chipText: {
-    color: '#ffffff',
-    fontSize: 16
-  },
-  buttonContainer: {
-    position: 'absolute',
-    bottom: 20,
-    right: 20,
-  },
-});
-
-async function getCredentials() {
-  const identifier = await SecureStore.getItemAsync('identifier');
-  const password = await SecureStore.getItemAsync('password');
-  return { identifier, password };
-}
-
 const parseSearchTerm = (searchTerm) => {
-  const conditions = {};
-  const regex = /(\w+):([^\s]+)/g;
-  let match;
-
-  while ((match = regex.exec(searchTerm)) !== null) {
-    const key = match[1].toLowerCase();
-    const value = match[2];
-    conditions[key] = value;
-  }
-
-  const textSearch = searchTerm.replace(regex, '').trim();
-  if (textSearch) {
-    conditions.ocr_text = textSearch;
-  }
-
-  return conditions;
+  return searchTerm.trim(); // 모든 검색어를 그대로 반환
 };
 
 async function fetchDocuments(searchTerm) {
   const { identifier, password } = await getCredentials();
-  const searchConditions = parseSearchTerm(searchTerm);
+  const formattedSearchTerm = parseSearchTerm(searchTerm);
 
   const searchData = {
     identifier: identifier,
     password: password,
-    ...searchConditions,
+    search_term: formattedSearchTerm,
   };
 
   try {
@@ -133,12 +89,12 @@ async function fetchDocuments(searchTerm) {
     const data = await response.json();
 
     if (data.StatusCode === 200) {
-      return data.data;
+      return { data: data.data, status: 200 }; // 성공 시 데이터 반환
     } else {
-      return [];
+      return { data: [], status: data.StatusCode }; // 실패 시 상태 코드와 빈 데이터 반환
     }
   } catch (error) {
-    return [];
+    return { data: [], status: 500 }; // 네트워크 오류 시 상태 코드 500 반환
   }
 }
 
@@ -148,6 +104,19 @@ const HomeScreen = () => {
   const [visibleModal, setVisibleModal] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [isSearching, setIsSearching] = useState(false);
+  const [searchError, setSearchError] = useState(null);
+
+  const clearSearch = () => {
+    setSearchTerm(''); // 검색어 상태 초기화
+  };
+
+  const tags = [
+    { key: 'upload:20240101', label: 'upload:20240101' },
+    { key: 'filetype:pdf', label: 'filetype:pdf' },
+    { key: 'pages:>15', label: 'pages:>15' },
+    { key: 'size:<5MB', label: 'size:<5MB' },
+    { key: 'filename:report', label: 'filename:report' },
+  ];
 
   const formatDocuments = (fetchedDocuments) => {
     if (fetchedDocuments && fetchedDocuments.length > 0) {
@@ -180,17 +149,31 @@ const HomeScreen = () => {
 
   const handleSearch = async () => {
     setIsSearching(true);
-    const fetchedDocuments = await fetchDocuments(searchTerm);
-    formatDocuments(fetchedDocuments);
+    setSearchError(null); // 검색 시작 시 오류 상태 초기화
+    const result = await fetchDocuments(searchTerm);
+
+    if (result.status === 404) {
+      setSearchError('검색 결과가 없습니다.'); // 검색 결과가 없을 때 오류 메시지 설정
+      setDocuments([]); // 문서 목록 초기화
+    } else if (result.status === 200) {
+      formatDocuments(result.data);
+    } else {
+      setSearchError('오류가 발생했습니다. 나중에 다시 시도해주세요.');
+    }
+
     setIsSearching(false);
   };
-
   useEffect(() => {
+    let isMounted = true; // 컴포넌트 마운트 상태 체크 변수
     const fetchData = async () => {
-      await handleSearch();
+      if (isMounted) {  // 컴포넌트가 마운트된 상태에서만 데이터 가져오기
+        await handleSearch();
+      }
     };
-
     fetchData();
+    return () => {
+      isMounted = false; // 컴포넌트 언마운트 시 상태 업데이트 중지
+    };
   }, []);
 
   const addTagToSearch = (tag) => {
@@ -214,38 +197,60 @@ const HomeScreen = () => {
             onPress={isSearching ? null : handleSearch} // 검색 중일 땐 클릭 불가
             rippleColor="rgba(0, 0, 0, .32)"
             borderless={true}
-            style={styles.searchIconContainer}
           >
             <AntDesign
               name="search1"
               size={20}
               color={isSearching ? 'lightgray' : 'gray'} // 검색 중일 때 색상 변경
-              style={styles.searchIcon}
+              style={styles.SearchIcon}
             />
           </TouchableRipple>
           <TextInput
-            style={styles.searchBar}
+            style={styles.HomeTextInput}
             placeholder="검색어를 입력하세요"
             value={searchTerm}
             onChangeText={(text) => setSearchTerm(text)} // 검색어 상태 업데이트
             underlineColorAndroid="transparent"
             placeholderTextColor="#999"
           />
+          {searchTerm.length > 0 && (
+            <TouchableRipple onPress={clearSearch}>
+              <MaterialIcons name="close" size={20} color="gray" />
+            </TouchableRipple>
+          )}
         </View>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tagContainer}>
-          <Chip style={styles.chip} textStyle={styles.chipText} onPress={() => addTagToSearch('upload:20240101')}>upload:20240101</Chip>
-          <Chip style={styles.chip} textStyle={styles.chipText} onPress={() => addTagToSearch('filetype:pdf')}>filetype:pdf</Chip>
-          <Chip style={styles.chip} textStyle={styles.chipText} onPress={() => addTagToSearch('pages:>15')}>pages:&gt;15</Chip>
-          <Chip style={styles.chip} textStyle={styles.chipText} onPress={() => addTagToSearch('size:<5MB')}>size:&lt;5MB</Chip>
-          <Chip style={styles.chip} textStyle={styles.chipText} onPress={() => addTagToSearch('filename:report')}>filename:report</Chip>
-        </ScrollView>
-
+        <View>
+          <FlatList
+            data={tags}
+            horizontal
+            keyExtractor={(item) => item.key}
+            renderItem={({ item }) => (
+              <Chip
+                style={styles.FilterForm}
+                textStyle={styles.FilterText}
+                onPress={() => addTagToSearch(item.key)}
+              >
+                {item.label}
+              </Chip>
+            )}
+            showsHorizontalScrollIndicator={false}
+          />
+        </View>
+        <View style={{ borderBottomWidth: 1, borderColor: '#E0E0E0', marginVertical: 10 }} />
         {isSearching ? (
-          <ActivityIndicator size="large" color="#1e90ff" />
+          <View style={{ flex: 1, alignItems: 'center' }}>
+            <ActivityIndicator size="large" color="#1e90ff" />
+          </View>
         ) : (
-          <DocumentList documents={documents} />
+          <>
+            {searchError && (
+              <View style={{ alignItems: 'center', marginTop: 1 }}>
+                <Text style={{ color: '#999', fontSize: 16 }}>{searchError}</Text>
+              </View>
+            )}
+            <DocumentList documents={documents} />
+          </>
         )}
-        
         <UploadModal visible={visibleModal === 'upload'} hideModal={hideModal} />
         <FAB.Group
           open={open}

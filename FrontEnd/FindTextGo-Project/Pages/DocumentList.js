@@ -1,19 +1,17 @@
+// DocumentList.js
 import React from 'react';
-import { View, FlatList, Image, Text, TouchableOpacity } from 'react-native';
-import { Card } from 'react-native-paper';
-import { AntDesign } from '@expo/vector-icons'; // 추가된 부분
+import { View, FlatList, Image, Text } from 'react-native';
+import { Card, Surface } from 'react-native-paper';
+import { AntDesign } from '@expo/vector-icons';
 
 const styles = {
   card: {
-    marginVertical: 10,
-    padding: 15,
-    borderRadius: 12,
-    backgroundColor: '#f9f9f9',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 5,
-    elevation: 5,
+    marginVertical: 5,
+    padding: 20,
+    backgroundColor: '#ffffff',
+    borderWidth: 1, // 카드 경계선 추가
+    borderColor: '#ddd', // 경계선 색상 설정
+    borderRadius: 8, // 경계선 모서리 둥글게 처리
   },
   contentRow: {
     flexDirection: 'row',
@@ -23,7 +21,7 @@ const styles = {
     flex: 1,
     marginRight: 15,
   },
-  cardImage: {
+  CardthumbnailImage: {
     width: '100%',
     height: 170,
     borderRadius: 8,
@@ -40,46 +38,47 @@ const styles = {
     color: '#999',
     fontSize: 14,
   },
-  contentContainer: {
+  CardContentContainer: {
     flex: 2,
     justifyContent: 'center',
   },
-  cardTitle: {
+  CardTitleText: {
     fontSize: 19,
     fontWeight: 'bold',
     marginBottom: 8,
     color: '#222',
   },
-  cardExtensionContainer: {
-    backgroundColor: '#007BFF', // 파란색 배경
-    paddingVertical: 10,
-    paddingHorizontal: 20,
+  CardTypeContainer: {
+    backgroundColor: '#DF0101',
+    width: 60, 
+    height: 35, 
     borderRadius: 10,
-    alignSelf: 'flex-start',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  cardExtensionText: {
-    color: '#fff', // 흰색 글자색
-    fontSize: 14,
+  CardTypeText: {
+    color: '#fff', 
+    fontSize: 15,
     fontWeight: 'bold',
   },
-  infoRow: {
+  CardInfoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginTop: 20,
     borderTopWidth: 1,
     borderTopColor: '#eee',
     paddingTop: 10,
-  },
-  cardDescription: {
-    fontSize: 15,
-    color: '#aaa',
-  },
-  cardDate: {
+  },  
+  CardDateText: {
     marginTop: 10,
     fontSize: 12,
     color: '#aaa',
   },
-  cardPageInfo: {
+  CardStorageText: {
+    fontSize: 15,
+    color: '#aaa',
+  },
+  CardPageText: {
     fontSize: 15,
     color: '#aaa',
   },
@@ -88,34 +87,32 @@ const styles = {
 const DocumentList = ({ documents }) => {
   const renderItem = ({ item }) => {
     return (
-      <TouchableOpacity>
         <Card style={styles.card}>
           <View style={styles.contentRow}>
             <View style={styles.imageContainer}>
               {item.thumbnail ? (
-                <Image source={{ uri: item.thumbnail }} style={styles.cardImage} />
+                <Image source={{ uri: item.thumbnail }} style={styles.CardthumbnailImage} />
               ) : (
                 <View style={styles.defaultImage}>
                   <Text style={styles.defaultImageText}>No Image</Text>
                 </View>
               )}
             </View>
-            <View style={styles.contentContainer}>
-              <Text style={styles.cardTitle}>{item.title}</Text>
-              <View style={styles.cardExtensionContainer}>
-                <Text style={styles.cardExtensionText}>{item.extension}</Text>
-              </View>
-              <Text style={styles.cardDate}>{item.uploaddate}</Text>
+            <View style={styles.CardContentContainer}>
+              <Text style={styles.CardTitleText}>{item.title}</Text>
+              <Surface style={styles.CardTypeContainer}>
+                <Text style={styles.CardTypeText}>{item.extension}</Text>
+              </Surface>
+              <Text style={styles.CardDateText}>{item.uploaddate}</Text>
             </View>
           </View>
 
-          <View style={styles.infoRow}>
-            <Text style={styles.cardDescription}>{item.content}</Text>
-            <Text style={styles.cardPageInfo}>{item.pages}P</Text>
+          <View style={styles.CardInfoRow}>
+            <Text style={styles.CardStorageText}>{item.content}</Text>
+            <Text style={styles.CardPageText}>{item.pages}P</Text>
             <AntDesign name="star" size={20} color="#aaa" /> 
           </View>
         </Card>
-      </TouchableOpacity>
     );
   };
 

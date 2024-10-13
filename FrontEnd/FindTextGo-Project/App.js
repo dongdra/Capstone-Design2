@@ -20,22 +20,32 @@ export default function App() {
   const [loading, setLoading] = useState(true);  // 데이터를 불러오는 동안의 로딩 상태
   const [storedCredentials, setStoredCredentials] = useState(null); // 저장된 자격증명 상태 추가
 
-   // 컴포넌트가 마운트될 때 자격증명 확인
-  useEffect(() => {
-      const checkStoredCredentials = async () => {
-      const storedIdentifier = await SecureStore.getItemAsync('identifier');
-      const storedPassword = await SecureStore.getItemAsync('password');
-      
-      if (storedIdentifier && storedPassword) {
-        setStoredCredentials({ identifier: storedIdentifier, password: storedPassword }); //자격증명이 있으면 상태에 저장
-      }
+  // 자동로그인 여부 확인하는 변수 추가
+const [isAutoLoginEnabled, setIsAutoLoginEnabled] = useState(false);
 
-      setLoading(false);
-    };
+useEffect(() => {
+  const checkStoredCredentials = async () => {
+    const storedIdentifier = await SecureStore.getItemAsync('identifier');
+    const storedPassword = await SecureStore.getItemAsync('password');
+    const autoLoginStatus = await SecureStore.getItemAsync('isAutoLoginEnabled'); // 자동로그인 여부 확인
 
-    checkStoredCredentials();
-  }, []);
+    if (autoLoginStatus === 'true' && storedIdentifier && storedPassword) {
+      setStoredCredentials({ identifier: storedIdentifier, password: storedPassword });
+      setIsAutoLoginEnabled(true); // 자동로그인이 활성화된 경우
+    }
 
+    setLoading(false);
+  };
+  checkStoredCredentials();
+}, []);
+
+// 자동로그인이 활성화된 경우에만 로그인 시도
+useEffect(() => {
+  if (isAutoLoginEnabled && storedCredentials) {
+    handleLogin(storedCredentials.identifier, storedCredentials.password);
+  }
+}, [isAutoLoginEnabled, storedCredentials]);
+  
    // 사용자가 로그인하면 호출되는 함수
   const handleLogin = async (identifier, password) => {
     await SecureStore.setItemAsync('identifier', identifier);
@@ -47,7 +57,9 @@ export default function App() {
 const handleLogout = async () => {
   await SecureStore.deleteItemAsync('identifier');
   await SecureStore.deleteItemAsync('password');
+  await SecureStore.deleteItemAsync('isAutoLoginEnabled'); // 자동로그인 상태도 삭제
   setStoredCredentials(null);  // 자격증명을 초기화
+  setIsAutoLoginEnabled(false); // 자동로그인 상태 초기화
   setIsLoggedIn(false);   // 로그아웃 상태로 전환
 };
 
