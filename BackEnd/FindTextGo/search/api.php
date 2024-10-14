@@ -145,6 +145,33 @@ try {
     $conditions = [];
     $params = [$user_id];
     $types = 'i';
+	
+	// 날짜 필터 처리 (upload:20240101 또는 upload:20240101-20240901)
+if (preg_match('/upload:(\d{8})(-\d{8})?/', $searchTerm, $matches)) {
+    $startDate = $matches[1];
+    $endDate = isset($matches[2]) ? substr($matches[2], 1) : $startDate;
+    $conditions[] = "DATE(fu.upload_date) BETWEEN ? AND ?";
+    $params[] = $startDate;
+    $params[] = $endDate;
+    $types .= 'ss'; // 날짜 문자열 파라미터 추가
+}
+
+// 파일 크기 필터 처리 (size:500KB, size:<5MB)
+if (preg_match('/size:([<>]=?|=)?(\d+)([KMG]B)?/', $searchTerm, $matches)) {
+    $operator = $matches[1] ?: '='; // 기본적으로는 '=' 사용
+    $sizeValue = (int)$matches[2];
+    $sizeUnit = $matches[3] ?? 'B'; // 단위가 없으면 바이트로 간주
+    switch (strtoupper($sizeUnit)) {
+        case 'KB': $sizeValue *= 1024; break;
+        case 'MB': $sizeValue *= 1024 * 1024; break;
+        case 'GB': $sizeValue *= 1024 * 1024 * 1024; break;
+    }
+    $conditions[] = "fi.file_size $operator ?";
+    $params[] = $sizeValue;
+    $types .= 'i'; // 정수 파라미터 추가
+}
+
+
 
     // 파일 형식 필터 처리 (filetype:pdf)
     if (preg_match('/filetype:(\w+)/', $searchTerm, $matches)) {
