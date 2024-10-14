@@ -1,14 +1,20 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
 // DocumentList.js
 import React from 'react';
 import { View, FlatList, Image, Text } from 'react-native';
 import { Card, Surface } from 'react-native-paper';
 import { AntDesign } from '@expo/vector-icons';
 =======
+=======
+>>>>>>> parent of 964327c (태그추가)
 ///DocumentList.js
 import React from 'react';
 import { View, FlatList, Image, Text, TouchableOpacity } from 'react-native';
 import { Card } from 'react-native-paper';
+<<<<<<< HEAD
+>>>>>>> parent of 964327c (태그추가)
+=======
 >>>>>>> parent of 964327c (태그추가)
 
 const styles = {
@@ -50,8 +56,13 @@ const styles = {
     justifyContent: 'center',
   },
 <<<<<<< HEAD
+<<<<<<< HEAD
   CardTitleText: {
     fontSize: 19,
+=======
+  cardTitle: {
+    fontSize: 15,
+>>>>>>> parent of 964327c (태그추가)
 =======
   cardTitle: {
     fontSize: 15,
@@ -60,6 +71,7 @@ const styles = {
     marginBottom: 8,
     color: '#222',
   },
+<<<<<<< HEAD
 <<<<<<< HEAD
   CardTypeContainer: {
     backgroundColor: '#DF0101',
@@ -76,6 +88,8 @@ const styles = {
   },
   CardInfoRow: {
 =======
+=======
+>>>>>>> parent of 964327c (태그추가)
   infoRow: {
 >>>>>>> parent of 964327c (태그추가)
     flexDirection: 'row',
@@ -85,6 +99,7 @@ const styles = {
     borderTopColor: '#eee',
     paddingTop: 10,
 <<<<<<< HEAD
+<<<<<<< HEAD
   },  
   CardDateText: {
     marginTop: 10,
@@ -93,6 +108,23 @@ const styles = {
   },
   CardStorageText: {
     fontSize: 15,
+=======
+  },
+  cardId: {
+    fontSize: 12,
+    color: '#aaa',
+  },
+  cardDescription: {
+    fontSize: 12,
+    color: '#aaa',
+  },
+  cardDate:{
+    fontSize: 12,
+    color: '#aaa',
+  },
+  cardPageInfo: {
+    fontSize: 12,
+>>>>>>> parent of 964327c (태그추가)
     color: '#aaa',
   },
   CardPageText: {
@@ -120,6 +152,7 @@ const styles = {
 
 const DocumentList = ({ documents }) => {
 <<<<<<< HEAD
+<<<<<<< HEAD
   const renderItem = ({ item }) => {
     return (
         <Card style={styles.card}>
@@ -141,6 +174,8 @@ const DocumentList = ({ documents }) => {
               <Text style={styles.CardDateText}>{item.uploaddate}</Text>
             </View>
 =======
+=======
+>>>>>>> parent of 964327c (태그추가)
   const renderItem = ({ item }) => (
     <TouchableOpacity>
       <Card style={styles.card}>
@@ -153,6 +188,9 @@ const DocumentList = ({ documents }) => {
                 <Text style={styles.defaultImageText}>No Image</Text>
               </View>
             )}
+<<<<<<< HEAD
+>>>>>>> parent of 964327c (태그추가)
+=======
 >>>>>>> parent of 964327c (태그추가)
           </View>
           <View style={styles.contentContainer}>
@@ -161,6 +199,7 @@ const DocumentList = ({ documents }) => {
           </View>
         </View>
 
+<<<<<<< HEAD
 <<<<<<< HEAD
           <View style={styles.CardInfoRow}>
             <Text style={styles.CardStorageText}>{item.content}</Text>
@@ -171,6 +210,8 @@ const DocumentList = ({ documents }) => {
     );
   };
 =======
+=======
+>>>>>>> parent of 964327c (태그추가)
         <View style={styles.infoRow}>
           <Text style={styles.cardId}>ID: {item.id}</Text>
           <Text style={styles.cardDescription}>파일크기: {item.content}</Text>
@@ -180,6 +221,9 @@ const DocumentList = ({ documents }) => {
       </Card>
     </TouchableOpacity>
   );
+<<<<<<< HEAD
+>>>>>>> parent of 964327c (태그추가)
+=======
 >>>>>>> parent of 964327c (태그추가)
 
   return (
