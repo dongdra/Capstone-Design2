@@ -6,12 +6,12 @@
 
 // CORS 설정
 header("Access-Control-Allow-Origin: *"); // 모든 도메인 허용
-header("Access-Control-Allow-Methods: POST, OPTIONS"); 
-header("Access-Control-Allow-Headers: Content-Type, Authorization"); 
+header("Access-Control-Allow-Methods: POST, OPTIONS");
+header("Access-Control-Allow-Headers: Content-Type, Authorization");
 
 // OPTIONS 메소드에 대한 응답 처리 (CORS Preflight 요청 대응)
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(204); 
+    http_response_code(204);
     exit;
 }
 
@@ -44,7 +44,7 @@ try {
     $identifier = trim($data['identifier'] ?? ''); // 아이디 또는 이메일
     $password = trim($data['password'] ?? '');
     $searchTerm = trim($data['search_term'] ?? ''); // 검색어가 없으면 빈 문자열로 설정
-    
+
     // 필수 입력값 확인
     if (!$identifier || !$password) {
         sendJsonResponse(400, '아이디/이메일, 비밀번호를 모두 입력해야 합니다.');
@@ -154,12 +154,13 @@ try {
         $types .= 's'; // 문자열 파라미터 추가
     }
 
-    // 페이지 수 필터 처리 (pages>15)
-    if (preg_match('/pages>(\d+)/', $searchTerm, $matches)) {
-        $minPages = $matches[1];
-        $conditions[] = "fi.pdf_page_count > ?";
-        $params[] = $minPages;
-        $types .= 'i'; // 정수 파라미터 추가
+    // 페이지 수 필터 처리 (pages<3, pages<=3, pages=3, pages>=3, pages>3)
+    if (preg_match('/pages([<>]=?|=)(\d+)/', $searchTerm, $matches)) {
+        $operator = $matches[1]; // Comparison operator (>, <, >=, <=, or =)
+        $pageCount = (int) $matches[2]; // Page count number
+        $conditions[] = "fi.pdf_page_count $operator ?";
+        $params[] = $pageCount;
+        $types .= 'i'; // Integer parameter
     }
 
     // 기존 파일 업로드 정보에서 조건 필터 처리
