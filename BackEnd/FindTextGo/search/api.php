@@ -146,14 +146,14 @@ $conditions = [];
 $params = [$user_id];
 $types = 'i';
 	
-	// 날짜 필터 처리 (upload:20240101 또는 upload:20240101-20240901)
-if (preg_match('/upload:(\d{8})(-\d{8})?/', $searchTerm, $matches)) {
-    $startDate = $matches[1];
-    $endDate = isset($matches[2]) ? substr($matches[2], 1) : $startDate;
+	// 날짜 필터 처리 (upload:YYYYMMDD 또는 upload:YYYYMMDD-YYYYMMDD)
+if (preg_match('/upload:(\d{8})(?:-(\d{8}))?/', $searchTerm, $matches)) {
+    $startDate = $matches[1]; // 시작 날짜
+    $endDate = isset($matches[2]) ? $matches[2] : $startDate; // 종료 날짜, 없으면 시작 날짜로 설정
     $conditions[] = "DATE(fu.upload_date) BETWEEN ? AND ?";
     $params[] = $startDate;
     $params[] = $endDate;
-    $types .= 'ss'; // 두 날짜 모두 문자열로 처리
+    $types .= 'ss'; // 문자열 파라미터 추가
 }
 
 // 파일 크기 필터 처리 (size:500KB, size:<5MB)
