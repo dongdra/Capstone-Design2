@@ -155,9 +155,9 @@ try {
     }
 
     // 페이지 수 필터 처리 (pages<3, pages<=3, pages=3, pages>=3, pages>3)
-    if (preg_match('/pages([<>]=?|=)(\d+)/', $searchTerm, $matches)) {
+    if (preg_match('/pages:([<>]=?|=)(\d+)/', $searchTerm, $matches)) {
         $operator = $matches[1]; // Comparison operator (>, <, >=, <=, or =)
-        $pageCount = (int) $matches[2]; // Page count number
+        $pageCount = (int)$matches[2]; // Page count number
         $conditions[] = "fi.pdf_page_count $operator ?";
         $params[] = $pageCount;
         $types .= 'i'; // Integer parameter
