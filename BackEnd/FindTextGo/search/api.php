@@ -135,42 +135,16 @@ try {
         $ocrStmt->close();
     }
 
-   // 기본 파일 정보 쿼리 처리 (필터 적용 시)
-$fileSql = "SELECT fu.file_id, fu.file_name, fi.file_extension, fi.pdf_page_count, fi.file_size, fu.upload_date 
-FROM file_uploads fu
-JOIN file_info fi ON fu.file_id = fi.file_id
-WHERE fu.user_id = ?";
+    // 기본 파일 정보 쿼리 처리 (필터 적용 시)
+    $fileSql = "SELECT fu.file_id, fu.file_name, fi.file_extension, fi.pdf_page_count, fi.file_size, fu.upload_date 
+                FROM file_uploads fu
+                JOIN file_info fi ON fu.file_id = fi.file_id
+                WHERE fu.user_id = ?";
 
     // 조건 필터링
-$conditions = [];
-$params = [$user_id];
-$types = 'i';
-	
-// upload 날짜 조건 필터 처리 (upload:YYYYMMDD 또는 upload:YYYYMMDD-YYYYMMDD)
-if (preg_match('/upload:(\d{8})(?:-(\d{8}))?/', $searchTerm, $matches)) {
-    $startDate = $matches[1];  // 시작 날짜
-    $endDate = $matches[2] ?? $startDate;  // 끝 날짜가 없으면 시작 날짜와 동일하게 처리
-    $conditions[] = "DATE(fu.upload_date) BETWEEN ? AND ?";  // 날짜 범위 조건 추가
-    $params[] = $startDate;
-    $params[] = $endDate;
-    $types .= 'ss'; // 두 개의 문자열 파라미터 추가 (startDate, endDate)
-}
-// 파일 크기 필터 처리 (size:500KB, size:<5MB)
-if (preg_match('/size:([<>]=?|=)?(\d+)([KMG]B)?/', $searchTerm, $matches)) {
-    $operator = $matches[1] ?: '='; // 기본적으로는 '=' 사용
-    $sizeValue = (int)$matches[2];
-    $sizeUnit = $matches[3] ?? 'B'; // 단위가 없으면 바이트로 간주
-    switch (strtoupper($sizeUnit)) {
-        case 'KB': $sizeValue *= 1024; break;
-        case 'MB': $sizeValue *= 1024 * 1024; break;
-        case 'GB': $sizeValue *= 1024 * 1024 * 1024; break;
-    }
-    $conditions[] = "fi.file_size $operator ?";
-    $params[] = $sizeValue;
-    $types .= 'i'; // 정수 파라미터 추가
-}
-
-
+    $conditions = [];
+    $params = [$user_id];
+    $types = 'i';
 
     // 파일 형식 필터 처리 (filetype:pdf)
     if (preg_match('/filetype:(\w+)/', $searchTerm, $matches)) {
@@ -194,15 +168,15 @@ if (preg_match('/size:([<>]=?|=)?(\d+)([KMG]B)?/', $searchTerm, $matches)) {
         $fileSql .= " AND " . implode(' AND ', $conditions);
     }
 
-   $fileStmt = $conn->prepare($fileSql);
-if (!$fileStmt) {
-    throw new Exception('Failed to prepare statement: ' . $conn->error);
-}
+    $fileStmt = $conn->prepare($fileSql);
+    if (!$fileStmt) {
+        throw new Exception('Failed to prepare statement: ' . $conn->error);
+    }
 
-// 바인딩 변수의 수를 맞춰 bind_param 호출
-if ($types) {
-    $fileStmt->bind_param($types, ...$params);
-}
+    // 바인딩 변수의 수를 맞춰 bind_param 호출
+    if ($types) {
+        $fileStmt->bind_param($types, ...$params);
+    }
     $fileStmt->execute();
     $fileResult = $fileStmt->get_result();
 
