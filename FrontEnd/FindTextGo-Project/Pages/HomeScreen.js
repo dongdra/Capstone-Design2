@@ -1,5 +1,6 @@
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 //HomeScreen.js
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, TextInput, ActivityIndicator, Text, FlatList } from 'react-native';
@@ -90,6 +91,15 @@ import { FAB, Provider, TextInput, Button } from 'react-native-paper';
 import UploadModal from '../Modal/UploadModal';
 import DocumentList from './DocumentList';
 import * as SecureStore from 'expo-secure-store';
+=======
+// HomeScreen.js
+import React, { useState, useEffect } from 'react';
+import { View, StyleSheet } from 'react-native';
+import { FAB, Provider, TextInput, Button } from 'react-native-paper';
+import UploadModal from '../Modal/UploadModal';
+import DocumentList from './DocumentList';
+import * as SecureStore from 'expo-secure-store';
+>>>>>>> parent of 964327c (태그추가)
 import { API_BASE_URL } from '@env'; 
 
 const styles = StyleSheet.create({
@@ -139,6 +149,9 @@ async function getCredentials() {
 async function fetchDocuments(searchTerm) {
   const { identifier, password } = await getCredentials();
 <<<<<<< HEAD
+<<<<<<< HEAD
+>>>>>>> parent of 964327c (태그추가)
+=======
 >>>>>>> parent of 964327c (태그추가)
 =======
 >>>>>>> parent of 964327c (태그추가)
@@ -148,7 +161,11 @@ async function fetchDocuments(searchTerm) {
     password: password,
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
     search_term: formattedSearchTerm,
+=======
+    search_term: searchTerm,
+>>>>>>> parent of 964327c (태그추가)
 =======
     search_term: searchTerm,
 >>>>>>> parent of 964327c (태그추가)
@@ -171,10 +188,13 @@ async function fetchDocuments(searchTerm) {
     if (data.StatusCode === 200) {
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
       return { data: data.data, status: 200 }; // 성공 시 데이터 반환
     } else {
       return { data: [], status: data.StatusCode }; // 실패 시 상태 코드와 빈 데이터 반환
 =======
+=======
+>>>>>>> parent of 964327c (태그추가)
 =======
 >>>>>>> parent of 964327c (태그추가)
       return data.data;
@@ -238,6 +258,7 @@ const HomeScreen = () => {
     setIsSearching(true);
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
     setSearchError(null); // 검색 시작 시 오류 상태 초기화
     const result = await fetchDocuments(searchTerm);
 
@@ -286,6 +307,12 @@ const HomeScreen = () => {
     setIsSearching(false);
   };
 >>>>>>> parent of 964327c (태그추가)
+=======
+    const fetchedDocuments = await fetchDocuments(searchTerm); // 검색어 포함
+    formatDocuments(fetchedDocuments);
+    setIsSearching(false);
+  };
+>>>>>>> parent of 964327c (태그추가)
 
   const showModal = (modalType) => setVisibleModal(modalType);
   const hideModal = () => setVisibleModal(null);
@@ -294,6 +321,7 @@ const HomeScreen = () => {
     <Provider>
       <View style={styles.container}>
         <View style={styles.searchBarContainer}>
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
           <TouchableRipple
@@ -312,12 +340,15 @@ const HomeScreen = () => {
 >>>>>>> parent of 964327c (태그추가)
 =======
 >>>>>>> parent of 964327c (태그추가)
+=======
+>>>>>>> parent of 964327c (태그추가)
           <TextInput
             style={styles.HomeTextInput}
             placeholder="검색어를 입력하세요"
             value={searchTerm}
             onChangeText={setSearchTerm}
             mode="outlined"
+<<<<<<< HEAD
 <<<<<<< HEAD
           />
 <<<<<<< HEAD
@@ -385,6 +416,20 @@ const HomeScreen = () => {
         <DocumentList documents={documents} />
 >>>>>>> parent of 964327c (태그추가)
 =======
+        <DocumentList documents={documents} />
+>>>>>>> parent of 964327c (태그추가)
+=======
+          />
+          <Button
+            mode="contained"
+            style={styles.searchButton}
+            onPress={handleSearch}
+            loading={isSearching}
+            disabled={isSearching}
+          >
+            검색
+          </Button>
+        </View>
         <DocumentList documents={documents} />
 >>>>>>> parent of 964327c (태그추가)
         <UploadModal visible={visibleModal === 'upload'} hideModal={hideModal} />
