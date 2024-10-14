@@ -168,13 +168,21 @@ try {
 
     // 결과 처리
     $fileData = [];
-    while ($fileRow = $fileResult->fetch_assoc()) {
+      while ($fileRow = $fileResult->fetch_assoc()) {
+        $fileId = $fileRow['file_id'];
+        $firstPagePath = "../documents/$fileId/webp/1.webp";
+
+        // 첫 페이지 이미지 처리
+        $firstPageBase64 = file_exists($firstPagePath) ? base64_encode(file_get_contents($firstPagePath)) : null;
+
+        // 문서 정보 추가
         $fileData[] = [
             'file_name' => $fileRow['file_name'],
             'file_extension' => $fileRow['file_extension'],
             'pdf_page_count' => $fileRow['pdf_page_count'],
             'file_size' => $fileRow['file_size'],
-            'upload_date' => $fileRow['upload_date']
+            'upload_date' => $fileRow['upload_date'],
+			'first_page_image' => $firstPageBase64
         ];
     }
 
