@@ -135,16 +135,16 @@ try {
         $ocrStmt->close();
     }
 
-    // 기본 파일 정보 쿼리 처리 (필터 적용 시)
-    $fileSql = "SELECT fu.file_id, fu.file_name, fi.file_extension, fi.pdf_page_count, fi.file_size, fu.upload_date 
-                FROM file_uploads fu
-                JOIN file_info fi ON fu.file_id = fi.file_id
-                WHERE fu.user_id = ?";
+   // 기본 파일 정보 쿼리 처리 (필터 적용 시)
+$fileSql = "SELECT fu.file_id, fu.file_name, fi.file_extension, fi.pdf_page_count, fi.file_size, fu.upload_date 
+FROM file_uploads fu
+JOIN file_info fi ON fu.file_id = fi.file_id
+WHERE fu.user_id = ?";
 
     // 조건 필터링
-    $conditions = [];
-    $params = [$user_id];
-    $types = 'i';
+$conditions = [];
+$params = [$user_id];
+$types = 'i';
 	
 	// 날짜 필터 처리 (upload:20240101 또는 upload:20240101-20240901)
 if (preg_match('/upload:(\d{8})(-\d{8})?/', $searchTerm, $matches)) {
@@ -153,7 +153,7 @@ if (preg_match('/upload:(\d{8})(-\d{8})?/', $searchTerm, $matches)) {
     $conditions[] = "DATE(fu.upload_date) BETWEEN ? AND ?";
     $params[] = $startDate;
     $params[] = $endDate;
-    $types .= 'ss'; // 날짜 문자열 파라미터 추가
+    $types .= 'ss'; // 두 날짜 모두 문자열로 처리
 }
 
 // 파일 크기 필터 처리 (size:500KB, size:<5MB)
@@ -195,15 +195,15 @@ if (preg_match('/size:([<>]=?|=)?(\d+)([KMG]B)?/', $searchTerm, $matches)) {
         $fileSql .= " AND " . implode(' AND ', $conditions);
     }
 
-    $fileStmt = $conn->prepare($fileSql);
-    if (!$fileStmt) {
-        throw new Exception('Failed to prepare statement: ' . $conn->error);
-    }
+   $fileStmt = $conn->prepare($fileSql);
+if (!$fileStmt) {
+    throw new Exception('Failed to prepare statement: ' . $conn->error);
+}
 
-    // 바인딩 변수의 수를 맞춰 bind_param 호출
-    if ($types) {
-        $fileStmt->bind_param($types, ...$params);
-    }
+// 바인딩 변수의 수를 맞춰 bind_param 호출
+if ($types) {
+    $fileStmt->bind_param($types, ...$params);
+}
     $fileStmt->execute();
     $fileResult = $fileStmt->get_result();
 
