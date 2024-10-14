@@ -146,14 +146,14 @@ $conditions = [];
 $params = [$user_id];
 $types = 'i';
 	
-// 날짜 필터 처리 (upload:YYYYMMDD 또는 upload:YYYYMMDD-YYYYMMDD)
+// upload 날짜 조건 필터 처리 (upload:YYYYMMDD 또는 upload:YYYYMMDD-YYYYMMDD)
 if (preg_match('/upload:(\d{8})(?:-(\d{8}))?/', $searchTerm, $matches)) {
-    $startDate = DateTime::createFromFormat('Ymd', $matches[1])->format('Y-m-d'); // 20241005 → 2024-10-05
-    $endDate = isset($matches[2]) ? DateTime::createFromFormat('Ymd', $matches[2])->format('Y-m-d') : $startDate; // 종료 날짜가 없으면 시작 날짜와 동일하게
-    $conditions[] = "DATE(fu.upload_date) BETWEEN ? AND ?";
+    $startDate = $matches[1];  // 시작 날짜
+    $endDate = $matches[2] ?? $startDate;  // 끝 날짜가 없으면 시작 날짜와 동일하게 처리
+    $conditions[] = "DATE(fu.upload_date) BETWEEN ? AND ?";  // 날짜 범위 조건 추가
     $params[] = $startDate;
     $params[] = $endDate;
-    $types .= 'ss'; // 문자열 파라미터 추가
+    $types .= 'ss'; // 두 개의 문자열 파라미터 추가 (startDate, endDate)
 }
 // 파일 크기 필터 처리 (size:500KB, size:<5MB)
 if (preg_match('/size:([<>]=?|=)?(\d+)([KMG]B)?/', $searchTerm, $matches)) {
