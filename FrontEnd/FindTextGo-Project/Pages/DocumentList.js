@@ -1,8 +1,15 @@
+<<<<<<< HEAD
 // DocumentList.js
 import React from 'react';
 import { View, FlatList, Image, Text } from 'react-native';
 import { Card, Surface } from 'react-native-paper';
 import { AntDesign } from '@expo/vector-icons';
+=======
+///DocumentList.js
+import React from 'react';
+import { View, FlatList, Image, Text, TouchableOpacity } from 'react-native';
+import { Card } from 'react-native-paper';
+>>>>>>> parent of 964327c (태그추가)
 
 const styles = {
   card: {
@@ -42,12 +49,18 @@ const styles = {
     flex: 2,
     justifyContent: 'center',
   },
+<<<<<<< HEAD
   CardTitleText: {
     fontSize: 19,
+=======
+  cardTitle: {
+    fontSize: 15,
+>>>>>>> parent of 964327c (태그추가)
     fontWeight: 'bold',
     marginBottom: 8,
     color: '#222',
   },
+<<<<<<< HEAD
   CardTypeContainer: {
     backgroundColor: '#DF0101',
     width: 60, 
@@ -62,12 +75,16 @@ const styles = {
     fontWeight: 'bold',
   },
   CardInfoRow: {
+=======
+  infoRow: {
+>>>>>>> parent of 964327c (태그추가)
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginTop: 20,
     borderTopWidth: 1,
     borderTopColor: '#eee',
     paddingTop: 10,
+<<<<<<< HEAD
   },  
   CardDateText: {
     marginTop: 10,
@@ -80,11 +97,29 @@ const styles = {
   },
   CardPageText: {
     fontSize: 15,
+=======
+  },
+  cardId: {
+    fontSize: 12,
+    color: '#aaa',
+  },
+  cardDescription: {
+    fontSize: 12,
+    color: '#aaa',
+  },
+  cardDate:{
+    fontSize: 12,
+    color: '#aaa',
+  },
+  cardPageInfo: {
+    fontSize: 12,
+>>>>>>> parent of 964327c (태그추가)
     color: '#aaa',
   },
 };
 
 const DocumentList = ({ documents }) => {
+<<<<<<< HEAD
   const renderItem = ({ item }) => {
     return (
         <Card style={styles.card}>
@@ -105,8 +140,28 @@ const DocumentList = ({ documents }) => {
               </Surface>
               <Text style={styles.CardDateText}>{item.uploaddate}</Text>
             </View>
+=======
+  const renderItem = ({ item }) => (
+    <TouchableOpacity>
+      <Card style={styles.card}>
+        <View style={styles.contentRow}>
+          <View style={styles.imageContainer}>
+            {item.thumbnail ? (
+              <Image source={{ uri: item.thumbnail }} style={styles.cardImage} />
+            ) : (
+              <View style={styles.defaultImage}>
+                <Text style={styles.defaultImageText}>No Image</Text>
+              </View>
+            )}
+>>>>>>> parent of 964327c (태그추가)
           </View>
+          <View style={styles.contentContainer}>
+            <Text style={styles.cardTitle}>{item.title}</Text>     
+            <Text style={styles.cardTitle}>파일 형식: {item.extenstion}</Text>  
+          </View>
+        </View>
 
+<<<<<<< HEAD
           <View style={styles.CardInfoRow}>
             <Text style={styles.CardStorageText}>{item.content}</Text>
             <Text style={styles.CardPageText}>{item.pages}P</Text>
@@ -115,6 +170,17 @@ const DocumentList = ({ documents }) => {
         </Card>
     );
   };
+=======
+        <View style={styles.infoRow}>
+          <Text style={styles.cardId}>ID: {item.id}</Text>
+          <Text style={styles.cardDescription}>파일크기: {item.content}</Text>
+          <Text style={styles.cardDate}>{item.uploaddate}</Text>
+          <Text style={styles.cardPageInfo}>Pages: {item.pages}</Text>
+        </View>
+      </Card>
+    </TouchableOpacity>
+  );
+>>>>>>> parent of 964327c (태그추가)
 
   return (
     <FlatList

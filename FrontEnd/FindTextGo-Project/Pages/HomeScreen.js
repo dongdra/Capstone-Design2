@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 //HomeScreen.js
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, TextInput, ActivityIndicator, Text, FlatList } from 'react-native';
@@ -70,11 +71,72 @@ const parseSearchTerm = (searchTerm) => {
 async function fetchDocuments(searchTerm) {
   const { identifier, password } = await getCredentials();
   const formattedSearchTerm = parseSearchTerm(searchTerm);
+=======
+// HomeScreen.js
+import React, { useState, useEffect } from 'react';
+import { View, StyleSheet } from 'react-native';
+import { FAB, Provider, TextInput, Button } from 'react-native-paper';
+import UploadModal from '../Modal/UploadModal';
+import DocumentList from './DocumentList';
+import * as SecureStore from 'expo-secure-store';
+import { API_BASE_URL } from '@env'; 
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    padding: 10,
+    backgroundColor: '#f5f5f5',
+  },
+  searchBarContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  searchBar: {
+    flex: 1,
+    marginRight: 10,
+  },
+  searchButton: {
+    backgroundColor: '#536ed9',
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  buttonContainer: {
+    position: 'absolute',
+    bottom: 20,
+    right: 20,
+  },
+});
+
+// 파일 크기 변환 함수
+const formatFileSize = (bytes) => {
+  if (bytes === 0) return '0 Bytes';
+  
+  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(1024));
+  const fileSize = parseFloat((bytes / Math.pow(1024, i)).toFixed(2));
+  
+  return `${fileSize} ${sizes[i]}`;
+};
+
+async function getCredentials() {
+  const identifier = await SecureStore.getItemAsync('identifier');
+  const password = await SecureStore.getItemAsync('password');
+  return { identifier, password };
+}
+
+async function fetchDocuments(searchTerm) {
+  const { identifier, password } = await getCredentials();
+>>>>>>> parent of 964327c (태그추가)
 
   const searchData = {
     identifier: identifier,
     password: password,
+<<<<<<< HEAD
     search_term: formattedSearchTerm,
+=======
+    search_term: searchTerm,
+>>>>>>> parent of 964327c (태그추가)
   };
 
   try {
@@ -89,9 +151,17 @@ async function fetchDocuments(searchTerm) {
     const data = await response.json();
 
     if (data.StatusCode === 200) {
+<<<<<<< HEAD
       return { data: data.data, status: 200 }; // 성공 시 데이터 반환
     } else {
       return { data: [], status: data.StatusCode }; // 실패 시 상태 코드와 빈 데이터 반환
+=======
+      return data.data;
+    } 
+    else 
+    {
+      return [];
+>>>>>>> parent of 964327c (태그추가)
     }
   } catch (error) {
     return { data: [], status: 500 }; // 네트워크 오류 시 상태 코드 500 반환
@@ -122,23 +192,19 @@ const HomeScreen = () => {
     if (fetchedDocuments && fetchedDocuments.length > 0) {
       const formattedData = fetchedDocuments.map((doc, index) => {
         const formattedSize = formatFileSize(doc.file_size);
-        let thumbnail = null;
-
-        if (doc.first_page_image) {
-          thumbnail = `data:image/jpeg;base64,${doc.first_page_image}`;
-        } else if (doc.page_image) {
-          thumbnail = `data:image/jpeg;base64,${doc.page_image}`;
-        }
+        console.log('Original file size:', doc.file_size); // 원래 파일 크기 출력
+        console.log('Formatted file size:', formattedSize); // 변환된 파일 크기 출력
 
         return {
           id: index.toString(),
           title: doc.file_name,
-          extension: doc.file_extension,
-          content: formattedSize,
-          thumbnail: thumbnail,
+          extenstion: doc.file_extension,
+          content: formattedSize, 
+          thumbnail: doc.first_page_image
+            ? `data:image/jpeg;base64,${doc.first_page_image}`
+            : null,
           pages: doc.pdf_page_count,
-          uploaddate: doc.upload_date,
-          pageNumber: doc.page_number || null,
+          uploaddate: doc.upload_date
         };
       });
       setDocuments(formattedData);
@@ -149,6 +215,7 @@ const HomeScreen = () => {
 
   const handleSearch = async () => {
     setIsSearching(true);
+<<<<<<< HEAD
     setSearchError(null); // 검색 시작 시 오류 상태 초기화
     const result = await fetchDocuments(searchTerm);
 
@@ -185,6 +252,12 @@ const HomeScreen = () => {
       return prev;
     });
   };
+=======
+    const fetchedDocuments = await fetchDocuments(searchTerm); // 검색어 포함
+    formatDocuments(fetchedDocuments);
+    setIsSearching(false);
+  };
+>>>>>>> parent of 964327c (태그추가)
 
   const showModal = (modalType) => setVisibleModal(modalType);
   const hideModal = () => setVisibleModal(null);
@@ -193,6 +266,7 @@ const HomeScreen = () => {
     <Provider>
       <View style={styles.container}>
         <View style={styles.searchBarContainer}>
+<<<<<<< HEAD
           <TouchableRipple
             onPress={isSearching ? null : handleSearch} // 검색 중일 땐 클릭 불가
             rippleColor="rgba(0, 0, 0, .32)"
@@ -205,14 +279,16 @@ const HomeScreen = () => {
               style={styles.SearchIcon}
             />
           </TouchableRipple>
+=======
+>>>>>>> parent of 964327c (태그추가)
           <TextInput
             style={styles.HomeTextInput}
             placeholder="검색어를 입력하세요"
             value={searchTerm}
-            onChangeText={(text) => setSearchTerm(text)} // 검색어 상태 업데이트
-            underlineColorAndroid="transparent"
-            placeholderTextColor="#999"
+            onChangeText={setSearchTerm}
+            mode="outlined"
           />
+<<<<<<< HEAD
           {searchTerm.length > 0 && (
             <TouchableRipple onPress={clearSearch}>
               <MaterialIcons name="close" size={20} color="gray" />
@@ -251,6 +327,19 @@ const HomeScreen = () => {
             <DocumentList documents={documents} />
           </>
         )}
+=======
+          <Button
+            mode="contained"
+            style={styles.searchButton}
+            onPress={handleSearch}
+            loading={isSearching}
+            disabled={isSearching}
+          >
+            검색
+          </Button>
+        </View>
+        <DocumentList documents={documents} />
+>>>>>>> parent of 964327c (태그추가)
         <UploadModal visible={visibleModal === 'upload'} hideModal={hideModal} />
         <FAB.Group
           open={open}
@@ -260,7 +349,7 @@ const HomeScreen = () => {
               icon: 'upload',
               label: '파일 업로드',
               onPress: () => showModal('upload'),
-            },
+            }
           ]}
           onStateChange={({ open }) => setOpen(open)}
         />
