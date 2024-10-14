@@ -1,6 +1,15 @@
 # PDF 파일 업로드
 /upload/upload.php는 파일업로드을 위한 경로입니다.
 
+## 의존성 프로그램
+본 기능을 정상 사용하기 위해서는 다음 프로그램들이 필요합니다.
+* libreoffice
+* pandoc
+* python(tested on 3.12)
+** Pillow
+** pdf2image
+* poppler
+
 ## 요청
 |HTTP|
 |--|
