@@ -22,37 +22,23 @@ function sendJsonResponse($statusCode, $message)
     exit;
 }
 
-// Base64로 이미지 파일 인코딩하는 함수
-function encodeImageToBase64($imagePath)
-{
-    $imageData = file_get_contents($imagePath);
-    return base64_encode($imageData);
-}
-
 // 네이버 클로바 OCR API 호출 함수
-function runClovaOCR($imagePath, $imageName)
+function runClovaOCR($imagePath)
 {
+    // API 호출을 위한 URL과 헤더 설정
     $apiUrl = CLOVA_OCR_API_URL;
     $secretKey = CLOVA_OCR_SECRET_KEY;
-
-    // 현재 날짜와 시간을 기반으로 파일명을 설정
-    $fileName = date('YmdHis') . "_" . $imageName;
-
-    // 이미지 파일을 Base64로 인코딩
-    $imageBase64 = encodeImageToBase64($imagePath);
 
     // API 요청을 위한 JSON 데이터 구성
     $requestJson = [
         'images' => [
             [
                 'format' => 'png',  // 이미지 파일 포맷 (png 사용)
-                'name' => $fileName,
-                'data' => $imageBase64,  // Base64로 인코딩된 이미지 데이터
+                'name' => 'demo'
             ]
         ],
         'requestId' => uniqid(),  // 고유 요청 ID 생성
         'version' => 'V2',  // API 버전
-        'lang' => 'ko, ja, zh-TW',  // 언어 설정
         'timestamp' => round(microtime(true) * 1000)  // 현재 타임스탬프 (밀리초)
     ];
 
@@ -65,8 +51,12 @@ function runClovaOCR($imagePath, $imageName)
         'Content-Type: application/json'  // 요청 데이터 형식 설정
     ]);
 
-    // JSON 데이터 전송
-    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($requestJson));  // POST 필드 설정
+    // 이미지 파일을 전송할 준비 (cURL에 파일을 보낼 때 사용)
+    $postFields = [
+        'message' => json_encode($requestJson),  // JSON 데이터
+        'file' => new CURLFile($imagePath)  // 이미지 파일 (CURLFile로 안전하게 처리)
+    ];
+    curl_setopt($ch, CURLOPT_POSTFIELDS, $postFields);  // POST 필드 설정
 
     // API 호출 실행
     $response = curl_exec($ch);
@@ -79,23 +69,12 @@ function runClovaOCR($imagePath, $imageName)
     // cURL 세션 종료
     curl_close($ch);
 
-    // 응답에서 불필요한 b'...' 부분 제거
-    $response = trim($response, "b'");
-
-    // JSON 응답 디버깅 출력
-    error_log("API 응답: " . $response);
-
     // JSON 응답 파싱
     $responseData = json_decode($response, true);
 
     // JSON 파싱 중 오류가 발생하면 오류 메시지 반환
     if (json_last_error() !== JSON_ERROR_NONE) {
         sendJsonResponse(500, 'JSON 파싱 오류: ' . json_last_error_msg());
-    }
-
-    // 'images' 키가 존재하는지 확인
-    if (!isset($responseData['images']) || !is_array($responseData['images'])) {
-        sendJsonResponse(500, 'OCR 처리 중 오류가 발생했습니다. 응답 데이터에 images 키가 없습니다.');
     }
 
     // OCR 결과 반환 (인식된 텍스트 및 좌표 정보)
@@ -136,7 +115,7 @@ function saveOCRData($conn, $fileId, $pageNumber, $ocrResult)
 function processOCR($conn)
 {
     // OCR 처리가 필요한 파일을 가져오는 SQL 쿼리
-    $query = "SELECT file_id, pdf_page_count FROM file_info WHERE ocr_processed_count != pdf_page_count LIMIT 1";
+    $query = "SELECT file_id, pdf_page_count FROM file_info WHERE ocr_processed_count = 0 LIMIT 1";
     $stmt = $conn->prepare($query);
     $stmt->execute();
     $result = $stmt->get_result();
@@ -163,11 +142,11 @@ function processOCR($conn)
             continue;  // 이미지가 없으면 다음 페이지로
         }
 
-        // 네이버 클로바 OCR 호출하여 결과 받기 (현재 날짜와 파일명으로 처리)
-        $ocrResult = runClovaOCR($imagePath, "$page.png");
+        // 네이버 클로바 OCR 호출하여 결과 받기
+        $ocrResult = runClovaOCR($imagePath);
 
         // OCR 처리 중 오류 발생 시
-        if ($ocrResult === false || $ocrResult === null) {
+        if ($ocrResult === false) {
             sendJsonResponse(500, 'OCR 처리 중 오류가 발생했습니다.');
         }
 
@@ -194,3 +173,4 @@ try {
 } catch (Exception $e) {
     sendJsonResponse(500, '오류가 발생했습니다: ' . $e->getMessage());
 }
+?>
