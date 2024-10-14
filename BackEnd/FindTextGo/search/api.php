@@ -145,10 +145,9 @@ try {
     }
 
     // 기본 파일 정보 쿼리
-    $fileSql = "SELECT fu.file_id, fu.file_name, fi.file_extension, fi.pdf_page_count, fi.file_size, fu.upload_date 
+   $fileSql = "SELECT fu.file_id, fu.file_name, fi.file_extension, fi.pdf_page_count, fi.file_size, fu.upload_date 
                 FROM file_uploads fu
                 JOIN file_info fi ON fu.file_id = fi.file_id
-                LEFT JOIN ocr_data od ON fu.file_id = od.file_id 
                 WHERE fu.user_id = ?";
 
     // 조건이 있으면 WHERE에 추가
