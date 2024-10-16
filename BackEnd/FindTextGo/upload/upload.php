@@ -34,6 +34,38 @@ function sendJsonResponse($statusCode, $message, $data = null)
     exit;
 }
 
+function authenticateUser($conn, $identifier, $password)
+{
+    try {
+        // identifier가 username 또는 email일 수 있으므로 둘 다 조회
+        $query = "SELECT user_id, username, password, is_active FROM members WHERE (username = ? OR email = ?) AND is_active = 1";
+        $stmt = $conn->prepare($query);
+        $stmt->bind_param("ss", $identifier, $identifier);
+        $stmt->execute();
+        $result = $stmt->get_result();
+
+        // 사용자가 존재하지 않으면 예외 처리
+        if ($result->num_rows === 0) {
+            throw new Exception('사용자를 찾을 수 없거나 비활성화된 계정입니다.');
+        }
+
+        // 사용자 정보 가져오기
+        $user = $result->fetch_assoc();
+
+        // 비밀번호 확인 (DB에 저장된 해시된 비밀번호와 비교)
+        if (!password_verify($password, $user['password'])) {
+            throw new Exception('비밀번호가 일치하지 않습니다.');
+        }
+
+        // 인증 성공, 사용자 정보 반환
+        return $user;
+
+    } catch (Exception $e) {
+        error_log($e->getMessage());
+        sendJsonResponse(401, '인증 실패: ' . $e->getMessage());
+    }
+}
+
 // 파일 이름을 안전하게 만드는 함수
 function sanitizeFileName($filename)
 {
@@ -48,31 +80,63 @@ function sanitizeFileName($filename)
 function convertWithLibreOffice($inputFile, $outputDir)
 {
     try {
-        $command = escapeshellcmd("libreoffice --headless --convert-to pdf --outdir " . escapeshellarg($outputDir) . " " . escapeshellarg($inputFile));
+        // -env 옵션 구문 수정
+        $command = escapeshellcmd("libreoffice --headless --convert-to pdf --outdir " . escapeshellarg($outputDir) . " -env:UserInstallation=file:///tmp/LibreOfficeProfile " . escapeshellarg($inputFile));
         exec($command, $output, $returnVar);
+
+        // 디버깅용 로그: 명령어와 출력값, 반환 코드 기록
+        error_log("LibreOffice Command: $command");
+        error_log("LibreOffice Output: " . implode("\n", $output));
+        error_log("LibreOffice Return Var: $returnVar");
+
+        // 명령어 실행 후 에러 발생 시
         if ($returnVar !== 0) {
-            throw new Exception('LibreOffice 변환 실패');
+            // 변환 실패 시 오류 메시지와 출력값, 반환 코드를 함께 던짐
+            throw new Exception('LibreOffice 변환 실패: ' . implode("\n", $output));
         }
-        return true;
+
+        // 변환된 PDF 파일 경로 계산 (원본 파일명에서 확장자 제거 후 .pdf 추가)
+        $outputFileName = pathinfo($inputFile, PATHINFO_FILENAME) . '.pdf';
+        $outputFilePath = $outputDir . DIRECTORY_SEPARATOR . $outputFileName;
+
+        // 변환된 파일이 존재하는지 확인
+        if (!file_exists($outputFilePath)) {
+            throw new Exception('LibreOffice 변환 후 파일을 찾을 수 없습니다.');
+        }
+
+        return $outputFilePath;  // 변환된 파일 경로 반환
     } catch (Exception $e) {
-        error_log($e->getMessage());
-        return false;
+        // 오류 발생 시 출력값과 반환 코드도 JSON 응답에 포함
+        sendJsonResponse(400, 'LibreOffice 변환 실패', [
+            'output' => $output,
+            'return_var' => $e->getCode(),
+            'error' => $e->getMessage()
+        ]);
     }
 }
 
-// Pandoc으로 파일 변환 함수
+// Pandoc 변환 함수는 그대로 두되, 디버깅 메시지를 추가
 function convertWithPandoc($inputFile, $outputFile)
 {
     try {
         $command = escapeshellcmd("pandoc " . escapeshellarg($inputFile) . " -o " . escapeshellarg($outputFile));
         exec($command, $output, $returnVar);
+        
+        // 디버깅용 로그: 명령어와 출력값, 반환 코드 기록
+        error_log("Pandoc Command: $command");
+        error_log("Pandoc Output: " . implode("\n", $output));
+        error_log("Pandoc Return Var: $returnVar");
+
+        // 명령어 실행 후 에러 발생 시
         if ($returnVar !== 0) {
-            throw new Exception('Pandoc 변환 실패');
+            throw new Exception('Pandoc 변환 실패', $returnVar);
         }
         return true;
     } catch (Exception $e) {
-        error_log($e->getMessage());
-        return false;
+        sendJsonResponse(400, 'Pandoc 변환 실패', [
+            'output' => $output,
+            'return_var' => $e->getCode()
+        ]);
     }
 }
 
@@ -131,7 +195,15 @@ function getPDFPageCount($filePath)
 // PDF 유효성 확인
 function isValidPDF($filePath)
 {
+    if (!file_exists($filePath)) {
+        throw new Exception("파일이 존재하지 않습니다: $filePath");
+    }
+
     $file = fopen($filePath, 'rb');
+    if (!$file) {
+        throw new Exception("파일을 열 수 없습니다: $filePath");
+    }
+
     $header = fread($file, 4);
     fclose($file);
 
@@ -142,7 +214,7 @@ function isValidPDF($filePath)
     return true;
 }
 
-// 파일 처리 함수
+// 파일 저장 함수에서 디렉터리 경로 처리 강화
 function handleFileUpload($fileData, $fileExtension, $outputDir)
 {
     global $supportedExtensions;
@@ -260,9 +332,9 @@ function saveBase64File($base64Data, $filename)
             throw new Exception('파일 디코딩 실패');
         }
 
-        $filepath = tempnam(sys_get_temp_dir(), 'temp_');
+        $filepath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . $filename; // 임시 디렉토리에 저장
         if (file_put_contents($filepath, $decodedData) === false) {
-            throw new Exception('파일 저장 실패');
+            throw new Exception("파일 저장 실패: $filepath");
         }
 
         return $filepath;
@@ -273,6 +345,10 @@ function saveBase64File($base64Data, $filename)
 }
 
 // main logic
+
+// JSON 요청 본문을 받아서 배열로 변환
+$data = json_decode(file_get_contents('php://input'), true);
+
 try {
     // 필수 값 검증
     $identifier = trim($data['identifier'] ?? '');
