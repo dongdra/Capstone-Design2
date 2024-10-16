@@ -22,6 +22,18 @@ $supportedExtensions = [
     'txt' => 'pandoc'
 ];
 
+// JSON 응답을 반환하는 함수 정의
+function sendJsonResponse($statusCode, $message, $data = null)
+{
+    header('Content-Type: application/json');
+    $response = ['StatusCode' => $statusCode, 'message' => $message];
+    if ($data !== null) {
+        $response['data'] = $data;
+    }
+    echo json_encode($response);
+    exit;
+}
+
 // 파일 이름을 안전하게 만드는 함수
 function sanitizeFileName($filename)
 {
