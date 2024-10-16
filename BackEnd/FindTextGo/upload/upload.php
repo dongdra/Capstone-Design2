@@ -22,6 +22,16 @@ $supportedExtensions = [
     'txt' => 'pandoc'
 ];
 
+// 파일 이름을 안전하게 만드는 함수
+function sanitizeFileName($filename)
+{
+    // 파일 이름에서 위험한 문자를 제거 (허용하지 않는 문자: 공백, 특수 문자 등)
+    $filename = preg_replace('/[^A-Za-z0-9_\-\.]/', '_', $filename);
+    
+    // 너무 긴 파일 이름을 방지하기 위해 길이 제한 (255자 이하)
+    return substr($filename, 0, 255);
+}
+
 // LibreOffice로 파일 변환 함수
 function convertWithLibreOffice($inputFile, $outputDir)
 {
