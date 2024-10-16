@@ -70,10 +70,12 @@ function authenticateUser($conn, $identifier, $password)
 function sanitizeFileName($filename)
 {
     // 파일 이름에서 위험한 문자를 제거 (허용하지 않는 문자: 공백, 특수 문자 등)
-    $filename = preg_replace('/[^A-Za-z0-9_\-\.]/', '_', $filename);
+    // \p{L}은 모든 유니코드 문자의 알파벳(한글 포함)을 의미
+    // \p{N}은 숫자, _.-은 특수 문자
+    $filename = preg_replace('/[^\p{L}\p{N}_\.\-]/u', '_', $filename);
     
     // 너무 긴 파일 이름을 방지하기 위해 길이 제한 (255자 이하)
-    return substr($filename, 0, 255);
+    return mb_substr($filename, 0, 255);
 }
 
 // LibreOffice로 파일 변환 함수
