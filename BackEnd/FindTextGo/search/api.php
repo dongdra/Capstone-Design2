@@ -75,66 +75,6 @@ try {
     // 사용자 ID 가져오기
     $user_id = $user['user_id'];
 
-    // OCR 검색어 필터 처리
-    if (!preg_match('/filetype:\w+|pages:[<>]=?\d+/', $searchTerm) && !empty($searchTerm)) {
-        // OCR 테이블에서 검색
-        $ocrSearchTerm = '%' . $searchTerm . '%';
-        $ocrSql = "SELECT od.file_id, od.page_number, od.extracted_text, od.coord_x, od.coord_y, od.coord_width, od.coord_height, 
-                          fu.file_name, fi.file_extension, fi.pdf_page_count, fi.file_size, fu.upload_date 
-                    FROM ocr_data od
-                    JOIN file_uploads fu ON od.file_id = fu.file_id
-                    JOIN file_info fi ON fu.file_id = fi.file_id
-                    WHERE fu.user_id = ? AND od.extracted_text LIKE ?";
-
-        $ocrStmt = $conn->prepare($ocrSql);
-        if (!$ocrStmt) {
-            throw new Exception('Failed to prepare OCR statement: ' . $conn->error);
-        }
-
-        $ocrStmt->bind_param('is', $user_id, $ocrSearchTerm);
-        $ocrStmt->execute();
-        $ocrResult = $ocrStmt->get_result();
-
-        // OCR 검색 결과 처리
-        $fileData = [];
-        while ($ocrRow = $ocrResult->fetch_assoc()) {
-            $fileId = $ocrRow['file_id'];
-            $pageNumber = $ocrRow['page_number'];
-            $pageImagePath = "../documents/$fileId/webp/$pageNumber.webp";
-
-            // 페이지 이미지 처리
-            $pageImageBase64 = file_exists($pageImagePath) ? base64_encode(file_get_contents($pageImagePath)) : null;
-
-            // 문서 정보 및 OCR 영역 정보 추가
-            $fileData[] = [
-                'file_name' => $ocrRow['file_name'],
-                'file_extension' => $ocrRow['file_extension'],
-                'pdf_page_count' => $ocrRow['pdf_page_count'],
-                'file_size' => $ocrRow['file_size'],
-                'upload_date' => $ocrRow['upload_date'],
-                'page_number' => $ocrRow['page_number'],
-                'page_image' => $pageImageBase64, // 해당 페이지 이미지
-                'ocr_text' => $ocrRow['extracted_text'],
-                'coordinates' => [
-                    'coord_x' => $ocrRow['coord_x'],
-                    'coord_y' => $ocrRow['coord_y'],
-                    'coord_width' => $ocrRow['coord_width'],
-                    'coord_height' => $ocrRow['coord_height'],
-                ]
-            ];
-        }
-
-        // OCR 검색 결과가 없으면 검색 결과 없음을 반환하고 종료
-        if (empty($fileData)) {
-            sendJsonResponse(404, '검색 결과가 없습니다.');
-        }
-
-        // OCR 검색 결과가 있으면 바로 응답
-        sendJsonResponse(200, 'OCR 검색 성공', $fileData);
-
-        $ocrStmt->close();
-    }
-
     // 기본 파일 정보 쿼리 처리 (필터 적용 시)
     $fileSql = "SELECT fu.file_id, fu.file_name, fi.file_extension, fi.pdf_page_count, fi.file_size, fu.upload_date 
                 FROM file_uploads fu
@@ -154,13 +94,30 @@ try {
         $types .= 's'; // 문자열 파라미터 추가
     }
 
-    // 페이지 수 필터 처리 (pages:<3, pages:<=3, pages:=3, pages:>=3, pages:>3)
-    if (preg_match('/pages:([<>]=?|=)(\d+)/', $searchTerm, $matches)) {
-        $operator = $matches[1]; // Comparison operator (>, <, >=, <=, or =)
+    // 페이지 수 필터 처리 (pages:<3, pages:<=3, pages:=3, pages:>=3, pages:>3, pages:300)
+    if (preg_match('/pages:([<>]=?|=)?(\d+)/', $searchTerm, $matches)) {
+        $operator = isset($matches[1]) && $matches[1] !== '' ? $matches[1] : '='; // Comparison operator (>, <, >=, <=, or =). Default to '=' if not specified.
         $pageCount = (int)$matches[2]; // Page count number
         $conditions[] = "fi.pdf_page_count $operator ?";
         $params[] = $pageCount;
         $types .= 'i'; // 정수 파라미터 추가
+    }
+
+    // 파일 업로드 날짜 필터 처리 (upload:20240901, upload:20240901-20241001)
+    if (preg_match('/upload:(\d{8})(?:-(\d{8}))?/', $searchTerm, $matches)) {
+        $startDate = $matches[1];
+        $endDate = isset($matches[2]) ? $matches[2] : null;
+
+        if ($endDate) {
+            $conditions[] = "fu.upload_date BETWEEN ? AND ?";
+            $params[] = $startDate;
+            $params[] = $endDate;
+            $types .= 'ss'; // 문자열 파라미터 두 개 추가
+        } else {
+            $conditions[] = "fu.upload_date = ?";
+            $params[] = $startDate;
+            $types .= 's'; // 문자열 파라미터 추가
+        }
     }
 
     // 기존 파일 업로드 정보에서 조건 필터 처리
