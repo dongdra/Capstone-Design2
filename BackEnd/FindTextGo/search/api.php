@@ -107,14 +107,14 @@ try {
     if (preg_match('/upload:(\d{8})(?:-(\d{8}))?/', $searchTerm, $matches)) {
         $startDate = $matches[1];
         $endDate = isset($matches[2]) ? $matches[2] : null;
-
+    
         if ($endDate) {
-            $conditions[] = "fu.upload_date BETWEEN ? AND ?";
+            $conditions[] = "DATE(fu.upload_date) BETWEEN ? AND ?";
             $params[] = $startDate;
             $params[] = $endDate;
             $types .= 'ss'; // 문자열 파라미터 두 개 추가
         } else {
-            $conditions[] = "fu.upload_date = ?";
+            $conditions[] = "DATE(fu.upload_date) = ?";
             $params[] = $startDate;
             $types .= 's'; // 문자열 파라미터 추가
         }
