@@ -154,14 +154,16 @@ try {
         $types .= 's'; // 문자열 파라미터 추가
     }
 
-   // 페이지 수 필터 처리 (pages:<3, pages:<=3, pages:=3, pages:>=3, pages:>3)
-    if (preg_match('/pages:([<>]=?|=)(\d+)/', $searchTerm, $matches)) {
-        $operator = $matches[1]; // Comparison operator (>, <, >=, <=, or =)
-        $pageCount = (int)$matches[2]; // Page count number
-        $conditions[] = "fi.pdf_page_count $operator ?";
-        $params[] = $pageCount;
-        $types .= 'i'; // 정수 파라미터 추가
-    }
+  // 페이지 수 필터 처리 (pages:<3, pages:<=3, pages:=3, pages:>=3, pages:>3, pages:300)
+if (preg_match('/pages:([<>]=?|=)?(\d+)/', $searchTerm, $matches)) {
+    // 연산자가 없는 경우 기본 '=' 연산자 사용
+    $operator = !empty($matches[1]) ? $matches[1] : '=';
+
+    $pageCount = (int)$matches[2]; // 페이지 수를 정수로 변환
+    $conditions[] = "fi.pdf_page_count $operator ?";
+    $params[] = $pageCount;
+    $types .= 'i'; // 정수형 파라미터 추가
+}
 
     // 파일 업로드 날짜 필터 처리 (upload:20240901, upload:20240901-20241001)
     if (preg_match('/upload:(\d{8})(?:-(\d{8}))?/', $searchTerm, $matches)) {
