@@ -195,15 +195,19 @@ try {
         $types .= 'd'; // 실수형 파라미터 추가
     }
     
-    // 파일 이름 검색 조건 (확장자 무시)
-    if (preg_match('/filename:\'(.+?)\'/', $searchTerm, $matches)) {
-        $searchFilename = '%' . str_replace("''", "'", $matches[1]) . '%';
-        
-        // 확장자를 무시하고 파일 이름 검색 조건 추가
-        $conditions[] = "SUBSTRING_INDEX(fu.file_name, '.', 1) LIKE ?";
-        $params[] = $searchFilename;
-        $types .= 's'; // 문자열 파라미터 추가
-    }
+    // 파일 이름 검색 조건
+if (preg_match('/filename:(.+)/', $searchTerm, $matches)) {
+    // 검색어 추출 및 양쪽 공백 제거
+    $searchFilename = trim($matches[1]);
+    
+    // 따옴표가 있다면 제거 (작은따옴표와 큰따옴표 모두)
+    $searchFilename = trim($searchFilename, "'\"");
+    
+    // 단순 LIKE 검색으로 변경
+    $conditions[] = "fu.file_name LIKE ?";
+    $params[] = '%' . $searchFilename . '%';
+    $types .= 's';
+}
 
     // 기존 파일 업로드 정보에서 조건 필터 처리
     if ($conditions) {
