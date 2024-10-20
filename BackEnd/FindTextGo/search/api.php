@@ -165,22 +165,33 @@ if (preg_match('/pages:([<>]=?|=)?(\d+)/', $searchTerm, $matches)) {
     $types .= 'i'; // 정수형 파라미터 추가
 }
 
-   // 파일 업로드 날짜 필터 처리 (upload:20240901, upload:20240901-20241001)
+ // 파일 업로드 날짜 필터 처리 (upload:20240901, upload:20240901-20241001)
 if (preg_match('/upload:(\d{8})(?:-(\d{8}))?/', $searchTerm, $matches)) {
     $startDate = DateTime::createFromFormat('Ymd', $matches[1])->format('Y-m-d');
     $endDate = isset($matches[2]) ? DateTime::createFromFormat('Ymd', $matches[2])->format('Y-m-d') : null;
 
     if ($endDate) {
-        $conditions[] = "DATE(fu.upload_date) BETWEEN ? AND ?";
+        $conditions[] = "fu.upload_date BETWEEN ? AND ?";
         $params[] = $startDate;
         $params[] = $endDate;
         $types .= 'ss'; // 문자열 파라미터 두 개 추가
     } else {
-        $conditions[] = "DATE(fu.upload_date) = ?";
+        $conditions[] = "fu.upload_date = ?";
         $params[] = $startDate;
         $types .= 's'; // 문자열 파라미터 추가
     }
 }
+    
+    // 파일 이름 검색 조건 (확장자 무시)
+if (preg_match('/filename:(.+)/', $searchTerm, $matches)) {
+    $searchFilename = '%' . $matches[1] . '%';
+    
+    // 확장자를 무시하고 파일 이름 검색 조건 추가
+    $conditions[] = "SUBSTRING_INDEX(fu.file_name, '.', 1) LIKE ?";
+    $params[] = $searchFilename;
+    $types .= 's'; // 문자열 파라미터 추가
+}
+
 
 
     // 기존 파일 업로드 정보에서 조건 필터 처리
