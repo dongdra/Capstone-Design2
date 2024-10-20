@@ -75,8 +75,8 @@ try {
     // 사용자 ID 가져오기
     $user_id = $user['user_id'];
 
-        // OCR 검색어 필터 처리
-    if (!preg_match('/filetype:\w+|pages:[<>]=?\d+/', $searchTerm) && !empty($searchTerm)) {
+    // OCR 검색어 필터 처리
+    if (!preg_match('/filetype:\w+|pages:[<>]=?\d+|upload:\d{8}(?:-\d{8})?|size:[<>]?=?\d+(?:KB|MB|GB)?|filename:/', $searchTerm) && !empty($searchTerm)) {
         // OCR 테이블에서 검색
         $ocrSearchTerm = '%' . $searchTerm . '%';
         $ocrSql = "SELECT od.file_id, od.page_number, od.extracted_text, od.coord_x, od.coord_y, od.coord_width, od.coord_height, 
@@ -85,12 +85,10 @@ try {
                     JOIN file_uploads fu ON od.file_id = fu.file_id
                     JOIN file_info fi ON fu.file_id = fi.file_id
                     WHERE fu.user_id = ? AND od.extracted_text LIKE ?";
-
         $ocrStmt = $conn->prepare($ocrSql);
         if (!$ocrStmt) {
             throw new Exception('Failed to prepare OCR statement: ' . $conn->error);
         }
-
         $ocrStmt->bind_param('is', $user_id, $ocrSearchTerm);
         $ocrStmt->execute();
         $ocrResult = $ocrStmt->get_result();
@@ -107,6 +105,7 @@ try {
 
             // 문서 정보 및 OCR 영역 정보 추가
             $fileData[] = [
+                'file_id' => $fileId,
                 'file_name' => $ocrRow['file_name'],
                 'file_extension' => $ocrRow['file_extension'],
                 'pdf_page_count' => $ocrRow['pdf_page_count'],
@@ -131,7 +130,6 @@ try {
 
         // OCR 검색 결과가 있으면 바로 응답
         sendJsonResponse(200, 'OCR 검색 성공', $fileData);
-
         $ocrStmt->close();
     }
 
@@ -154,45 +152,58 @@ try {
         $types .= 's'; // 문자열 파라미터 추가
     }
 
-  // 페이지 수 필터 처리 (pages:<3, pages:<=3, pages:=3, pages:>=3, pages:>3, pages:300)
-if (preg_match('/pages:([<>]=?|=)?(\d+)/', $searchTerm, $matches)) {
-    // 연산자가 없는 경우 기본 '=' 연산자 사용
-    $operator = !empty($matches[1]) ? $matches[1] : '=';
+    // 페이지 수 필터 처리 (pages:<3, pages:<=3, pages:=3, pages:>=3, pages:>3, pages:300)
+    if (preg_match('/pages:([<>]=?|=)?(\d+)/', $searchTerm, $matches)) {
+        $operator = !empty($matches[1]) ? $matches[1] : '=';
+        $pageCount = (int)$matches[2]; // 페이지 수를 정수로 변환
+        $conditions[] = "fi.pdf_page_count $operator ?";
+        $params[] = $pageCount;
+        $types .= 'i'; // 정수형 파라미터 추가
+    }
 
-    $pageCount = (int)$matches[2]; // 페이지 수를 정수로 변환
-    $conditions[] = "fi.pdf_page_count $operator ?";
-    $params[] = $pageCount;
-    $types .= 'i'; // 정수형 파라미터 추가
-}
-
- // 파일 업로드 날짜 필터 처리 (upload:20240901, upload:20240901-20241001)
-if (preg_match('/upload:(\d{8})(?:-(\d{8}))?/', $searchTerm, $matches)) {
-    $startDate = DateTime::createFromFormat('Ymd', $matches[1])->format('Y-m-d');
-    $endDate = isset($matches[2]) ? DateTime::createFromFormat('Ymd', $matches[2])->format('Y-m-d') : null;
-
-    if ($endDate) {
+    // 파일 업로드 날짜 필터 처리 (upload:20240901, upload:20240901-20241001)
+    if (preg_match('/upload:(\d{8})(?:-(\d{8}))?/', $searchTerm, $matches)) {
+        $startDate = DateTime::createFromFormat('Ymd', $matches[1])->format('Y-m-d');
+        $endDate = isset($matches[2]) ? DateTime::createFromFormat('Ymd', $matches[2])->format('Y-m-d 23:59:59') : $startDate . ' 23:59:59';
         $conditions[] = "fu.upload_date BETWEEN ? AND ?";
         $params[] = $startDate;
         $params[] = $endDate;
         $types .= 'ss'; // 문자열 파라미터 두 개 추가
-    } else {
-        $conditions[] = "fu.upload_date = ?";
-        $params[] = $startDate;
-        $types .= 's'; // 문자열 파라미터 추가
     }
-}
+    
+    // 파일 크기 필터 처리 (size:500KB, size:<5MB, size:>1GB)
+    if (preg_match('/size:([<>]?=?)(\d+(?:\.\d+)?)\s*(KB|MB|GB)?/i', $searchTerm, $matches)) {
+        $operator = !empty($matches[1]) ? $matches[1] : '=';
+        $size = (float)$matches[2];
+        $unit = strtoupper($matches[3] ?? 'B');
+        
+        // 단위에 따라 바이트로 변환
+        switch ($unit) {
+            case 'KB':
+                $size *= 1024;
+                break;
+            case 'MB':
+                $size *= 1024 * 1024;
+                break;
+            case 'GB':
+                $size *= 1024 * 1024 * 1024;
+                break;
+        }
+        
+        $conditions[] = "fi.file_size $operator ?";
+        $params[] = $size;
+        $types .= 'd'; // 실수형 파라미터 추가
+    }
     
     // 파일 이름 검색 조건 (확장자 무시)
-if (preg_match('/filename:(.+)/', $searchTerm, $matches)) {
-    $searchFilename = '%' . $matches[1] . '%';
-    
-    // 확장자를 무시하고 파일 이름 검색 조건 추가
-    $conditions[] = "SUBSTRING_INDEX(fu.file_name, '.', 1) LIKE ?";
-    $params[] = $searchFilename;
-    $types .= 's'; // 문자열 파라미터 추가
-}
-
-
+    if (preg_match('/filename:\'(.+?)\'/', $searchTerm, $matches)) {
+        $searchFilename = '%' . str_replace("''", "'", $matches[1]) . '%';
+        
+        // 확장자를 무시하고 파일 이름 검색 조건 추가
+        $conditions[] = "SUBSTRING_INDEX(fu.file_name, '.', 1) LIKE ?";
+        $params[] = $searchFilename;
+        $types .= 's'; // 문자열 파라미터 추가
+    }
 
     // 기존 파일 업로드 정보에서 조건 필터 처리
     if ($conditions) {
@@ -222,6 +233,7 @@ if (preg_match('/filename:(.+)/', $searchTerm, $matches)) {
 
         // 문서 정보 추가
         $fileData[] = [
+            'file_id' => $fileId,
             'file_name' => $fileRow['file_name'],
             'file_extension' => $fileRow['file_extension'],
             'pdf_page_count' => $fileRow['pdf_page_count'],
@@ -243,7 +255,6 @@ if (preg_match('/filename:(.+)/', $searchTerm, $matches)) {
     $stmt->close();
     $fileStmt->close();
     $conn->close();
-
 } catch (Exception $e) {
     sendJsonResponse(500, '오류가 발생했습니다: ' . $e->getMessage());
 }
