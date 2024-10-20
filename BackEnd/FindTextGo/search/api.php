@@ -165,22 +165,23 @@ if (preg_match('/pages:([<>]=?|=)?(\d+)/', $searchTerm, $matches)) {
     $types .= 'i'; // 정수형 파라미터 추가
 }
 
-    // 파일 업로드 날짜 필터 처리 (upload:20240901, upload:20240901-20241001)
-    if (preg_match('/upload:(\d{8})(?:-(\d{8}))?/', $searchTerm, $matches)) {
-        $startDate = $matches[1];
-        $endDate = isset($matches[2]) ? $matches[2] : null;
-    
-        if ($endDate) {
-            $conditions[] = "DATE(fu.upload_date) BETWEEN ? AND ?";
-            $params[] = $startDate;
-            $params[] = $endDate;
-            $types .= 'ss'; // 문자열 파라미터 두 개 추가
-        } else {
-            $conditions[] = "DATE(fu.upload_date) = ?";
-            $params[] = $startDate;
-            $types .= 's'; // 문자열 파라미터 추가
-        }
+   // 파일 업로드 날짜 필터 처리 (upload:20240901, upload:20240901-20241001)
+if (preg_match('/upload:(\d{8})(?:-(\d{8}))?/', $searchTerm, $matches)) {
+    $startDate = DateTime::createFromFormat('Ymd', $matches[1])->format('Y-m-d');
+    $endDate = isset($matches[2]) ? DateTime::createFromFormat('Ymd', $matches[2])->format('Y-m-d') : null;
+
+    if ($endDate) {
+        $conditions[] = "DATE(fu.upload_date) BETWEEN ? AND ?";
+        $params[] = $startDate;
+        $params[] = $endDate;
+        $types .= 'ss'; // 문자열 파라미터 두 개 추가
+    } else {
+        $conditions[] = "DATE(fu.upload_date) = ?";
+        $params[] = $startDate;
+        $types .= 's'; // 문자열 파라미터 추가
     }
+}
+
 
     // 기존 파일 업로드 정보에서 조건 필터 처리
     if ($conditions) {
