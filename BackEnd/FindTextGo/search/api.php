@@ -96,7 +96,66 @@ try {
         $types .= 's';
     }
 
-    // 여기에 다른 검색 조건 처리 로직 추가 (filetype, pages, upload, size 등)
+    // 파일 형식 필터 처리 (filetype:pdf)
+
+    if (preg_match('/filetype:(\w+)/', $searchTerm, $matches)) {
+        $fileType = $matches[1];
+        $conditions[] = "fi.file_extension = ?";
+        $params[] = $fileType;
+        $types .= 's'; // 문자열 파라미터 추가
+    }
+
+
+
+    // 페이지 수 필터 처리 (pages:<3, pages:<=3, pages:=3, pages:>=3, pages:>3, pages:300)
+
+    if (preg_match('/pages:([<>]=?|=)?(\d+)/', $searchTerm, $matches)) {
+        $operator = !empty($matches[1]) ? $matches[1] : '=';
+        $pageCount = (int)$matches[2]; // 페이지 수를 정수로 변환
+        $conditions[] = "fi.pdf_page_count $operator ?";
+        $params[] = $pageCount;
+        $types .= 'i'; // 정수형 파라미터 추가
+    }
+
+    // 파일 업로드 날짜 필터 처리 (upload:20240901, upload:20240901-20241001)
+
+    if (preg_match('/upload:(\d{8})(?:-(\d{8}))?/', $searchTerm, $matches)) {
+        $startDate = DateTime::createFromFormat('Ymd', $matches[1])->format('Y-m-d');
+        $endDate = isset($matches[2]) ? DateTime::createFromFormat('Ymd', $matches[2])->format('Y-m-d 23:59:59') : $startDate . ' 23:59:59';
+        $conditions[] = "fu.upload_date BETWEEN ? AND ?";
+        $params[] = $startDate;
+        $params[] = $endDate;
+        $types .= 'ss'; // 문자열 파라미터 두 개 추가
+    }
+
+    
+
+    // 파일 크기 필터 처리 (size:500KB, size:<5MB, size:>1GB)
+
+    if (preg_match('/size:([<>]?=?)(\d+(?:\.\d+)?)\s*(KB|MB|GB)?/i', $searchTerm, $matches)) {
+        $operator = !empty($matches[1]) ? $matches[1] : '=';
+        $size = (float)$matches[2];
+        $unit = strtoupper($matches[3] ?? 'B');
+
+        // 단위에 따라 바이트로 변환
+
+        switch ($unit) {
+            case 'KB':
+                $size *= 1024;
+                break;
+            case 'MB':
+                $size *= 1024 * 1024;
+                break;
+            case 'GB':
+                $size *= 1024 * 1024 * 1024;
+                break;
+        }
+      
+        $conditions[] = "fi.file_size $operator ?";
+        $params[] = $size;
+        $types .= 'd'; // 실수형 파라미터 추가
+
+    }
 
     // 기본 파일 정보 쿼리
     $fileSql = "SELECT DISTINCT fu.file_id, fu.file_name, fi.file_extension, fi.pdf_page_count, fi.file_size, fu.upload_date 
