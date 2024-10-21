@@ -34,7 +34,7 @@
 
 #### 요청 예시
 ```url
-http://{address}:{port}/user/login.php
+http://{address}:{port}/upload/upload.php
 ```
 ```json
 {
