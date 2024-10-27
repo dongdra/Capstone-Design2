@@ -2,8 +2,7 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { AntDesign } from '@expo/vector-icons';
-import { Platform, View } from 'react-native';
-import { Appbar } from 'react-native-paper'; 
+import { KeyboardAvoidingView, Platform, View } from 'react-native';
 import HomeScreen from './HomeScreen';
 import LogRecordScreen from './LogRecordScreen';
 import ProfileScreen from './ProfileScreen';
@@ -12,15 +11,15 @@ import SettingsScreen from './SettingsScreen';
 const Tab = createBottomTabNavigator();
 
 export default function Home({ onLogout }) {
-  const renderAppBar = () => (
-    <Appbar.Header style={{ backgroundColor: '#ffffff' }}> 
-      <Appbar.Content />
-    </Appbar.Header>
-  );
+
 
   return (
+    <KeyboardAvoidingView
+    style={{ flex: 1 }}
+    behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0} // iOS의 경우 여백 조정
+  >
     <View style={{ flex: 1 }}>
-      {renderAppBar()}
       <Tab.Navigator
         initialRouteName="Home"
         screenOptions={({ route }) => ({
@@ -33,11 +32,12 @@ export default function Home({ onLogout }) {
             } else if (route.name === 'Settings') {
               iconName = 'setting'; 
             } else if (route.name === 'LogRecord') {
-              iconName = 'Safety'; 
+              iconName = 'appstore-o'; 
             }
             
             return <AntDesign name={iconName} size={size} color={color} />;
           },
+          tabBarHideOnKeyboard:true, 
           tabBarActiveTintColor: 'black',
           tabBarInactiveTintColor: 'gray',
           tabBarStyle: {
@@ -57,5 +57,6 @@ export default function Home({ onLogout }) {
         </Tab.Screen>
       </Tab.Navigator>
     </View>
+     </KeyboardAvoidingView>
   );
 }

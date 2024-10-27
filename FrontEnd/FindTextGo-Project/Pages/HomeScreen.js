@@ -1,15 +1,22 @@
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
 //HomeScreen.js
-import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, TextInput, ActivityIndicator, Text, FlatList } from 'react-native';
-import { FAB, Provider, TouchableRipple, Chip } from 'react-native-paper';
-import { AntDesign, MaterialIcons } from '@expo/vector-icons'; // MaterialIcons 추가
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+  View,
+  StyleSheet,
+  TextInput,
+  FlatList,
+  RefreshControl,
+  ActivityIndicator,
+  Text,
+} from 'react-native';
+import { FAB, Provider, TouchableRipple } from 'react-native-paper';
+import { AntDesign, MaterialIcons } from '@expo/vector-icons';
 import UploadModal from '../Modal/UploadModal';
+import FilterDialog from './FilterDialog';
 import DocumentList from './DocumentList';
 import * as SecureStore from 'expo-secure-store';
 import { API_BASE_URL } from '@env';
+import axios from 'axios';
 
 const styles = StyleSheet.create({
   container: {
@@ -45,8 +52,13 @@ const styles = StyleSheet.create({
   },
   FilterText: {
     color: '#6E6E6E',
-    fontSize: 13
-  }
+    fontSize: 13,
+  },
+  loaderContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
 });
 
 async function getCredentials() {
@@ -55,157 +67,34 @@ async function getCredentials() {
   return { identifier, password };
 }
 
-// 파일 크기 변환 함수
 const formatFileSize = (bytes) => {
   if (bytes === 0) return '0 Bytes';
-
   const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
   const i = Math.floor(Math.log(bytes) / Math.log(1024));
-  const fileSize = parseFloat((bytes / Math.pow(1024, i)).toFixed(2));
-
-  return `${fileSize} ${sizes[i]}`;
+  return `${(bytes / Math.pow(1024, i)).toFixed(2)} ${sizes[i]}`;
 };
-=======
-// HomeScreen.js
-import React, { useState, useEffect } from 'react';
-import { View, StyleSheet } from 'react-native';
-import { FAB, Provider, TextInput, Button } from 'react-native-paper';
-import UploadModal from '../Modal/UploadModal';
-import DocumentList from './DocumentList';
-import * as SecureStore from 'expo-secure-store';
-import { API_BASE_URL } from '@env'; 
->>>>>>> parent of 964327c (태그추가)
 
-const parseSearchTerm = (searchTerm) => {
-  return searchTerm.trim(); // 모든 검색어를 그대로 반환
-};
+const parseSearchTerm = (searchTerm) => searchTerm.trim();
 
 async function fetchDocuments(searchTerm) {
   const { identifier, password } = await getCredentials();
   const formattedSearchTerm = parseSearchTerm(searchTerm);
-=======
-// HomeScreen.js
-import React, { useState, useEffect } from 'react';
-import { View, StyleSheet } from 'react-native';
-import { FAB, Provider, TextInput, Button } from 'react-native-paper';
-import UploadModal from '../Modal/UploadModal';
-import DocumentList from './DocumentList';
-import * as SecureStore from 'expo-secure-store';
-=======
-// HomeScreen.js
-import React, { useState, useEffect } from 'react';
-import { View, StyleSheet } from 'react-native';
-import { FAB, Provider, TextInput, Button } from 'react-native-paper';
-import UploadModal from '../Modal/UploadModal';
-import DocumentList from './DocumentList';
-import * as SecureStore from 'expo-secure-store';
->>>>>>> parent of 964327c (태그추가)
-import { API_BASE_URL } from '@env'; 
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 10,
-    backgroundColor: '#f5f5f5',
-  },
-  searchBarContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 15,
-  },
-  searchBar: {
-    flex: 1,
-    marginRight: 10,
-  },
-  searchButton: {
-    backgroundColor: '#536ed9',
-    paddingVertical: 10,
-    borderRadius: 10,
-  },
-  buttonContainer: {
-    position: 'absolute',
-    bottom: 20,
-    right: 20,
-  },
-});
-
-// 파일 크기 변환 함수
-const formatFileSize = (bytes) => {
-  if (bytes === 0) return '0 Bytes';
-  
-  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(1024));
-  const fileSize = parseFloat((bytes / Math.pow(1024, i)).toFixed(2));
-  
-  return `${fileSize} ${sizes[i]}`;
-};
-
-async function getCredentials() {
-  const identifier = await SecureStore.getItemAsync('identifier');
-  const password = await SecureStore.getItemAsync('password');
-  return { identifier, password };
-}
-
-async function fetchDocuments(searchTerm) {
-  const { identifier, password } = await getCredentials();
-<<<<<<< HEAD
-<<<<<<< HEAD
->>>>>>> parent of 964327c (태그추가)
-=======
->>>>>>> parent of 964327c (태그추가)
-=======
->>>>>>> parent of 964327c (태그추가)
-
-  const searchData = {
-    identifier: identifier,
-    password: password,
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-    search_term: formattedSearchTerm,
-=======
-    search_term: searchTerm,
->>>>>>> parent of 964327c (태그추가)
-=======
-    search_term: searchTerm,
->>>>>>> parent of 964327c (태그추가)
-=======
-    search_term: searchTerm,
->>>>>>> parent of 964327c (태그추가)
-  };
+  const searchData = { identifier, password, search_term: formattedSearchTerm };
 
   try {
-    const response = await fetch(`${API_BASE_URL}/search/api.php`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(searchData),
+    const response = await axios.post(`${API_BASE_URL}/search/api.php`, searchData, {
+      headers: { 'Content-Type': 'application/json' },
     });
 
-    const data = await response.json();
-
-    if (data.StatusCode === 200) {
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-      return { data: data.data, status: 200 }; // 성공 시 데이터 반환
+    if (response.data.StatusCode === 200) {
+      return { data: response.data.data, status: 200 };
     } else {
-      return { data: [], status: data.StatusCode }; // 실패 시 상태 코드와 빈 데이터 반환
-=======
-=======
->>>>>>> parent of 964327c (태그추가)
-=======
->>>>>>> parent of 964327c (태그추가)
-      return data.data;
-    } 
-    else 
-    {
-      return [];
->>>>>>> parent of 964327c (태그추가)
+      return { data: [], status: response.data.StatusCode };
     }
   } catch (error) {
-    return { data: [], status: 500 }; // 네트워크 오류 시 상태 코드 500 반환
+    console.error('문서 검색 중 오류 발생:', error);
+    return { data: [], status: 500 };
   }
 }
 
@@ -216,103 +105,69 @@ const HomeScreen = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState(null);
+  const [showFilterDialog, setShowFilterDialog] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const clearSearch = () => {
-    setSearchTerm(''); // 검색어 상태 초기화
+  const clearSearch = () => setSearchTerm('');
+
+  const applyFiltersToSearch = (filters) => {
+    let appliedFilters = '';
+    if (filters.uploadDate?.startDate && filters.uploadDate?.endDate) {
+      appliedFilters += `upload:${filters.uploadDate.startDate.toLocaleDateString()}~${filters.uploadDate.endDate.toLocaleDateString()} `;
+    }
+    if (filters.singleDate) {
+      appliedFilters += `${filters.singleDate.toLocaleDateString()} `;
+    }
+    if (filters.fileType && filters.fileType.length > 0) {
+      appliedFilters += `${filters.fileType.join(',')} `;
+    }
+    setSearchTerm(appliedFilters.trim());
   };
-
-  const tags = [
-    { key: 'upload:20240101', label: 'upload:20240101' },
-    { key: 'filetype:pdf', label: 'filetype:pdf' },
-    { key: 'pages:>15', label: 'pages:>15' },
-    { key: 'size:<5MB', label: 'size:<5MB' },
-    { key: 'filename:report', label: 'filename:report' },
-  ];
 
   const formatDocuments = (fetchedDocuments) => {
-    if (fetchedDocuments && fetchedDocuments.length > 0) {
-      const formattedData = fetchedDocuments.map((doc, index) => {
-        const formattedSize = formatFileSize(doc.file_size);
-        console.log('Original file size:', doc.file_size); // 원래 파일 크기 출력
-        console.log('Formatted file size:', formattedSize); // 변환된 파일 크기 출력
-
-        return {
-          id: index.toString(),
-          title: doc.file_name,
-          extenstion: doc.file_extension,
-          content: formattedSize, 
-          thumbnail: doc.first_page_image
-            ? `data:image/jpeg;base64,${doc.first_page_image}`
-            : null,
-          pages: doc.pdf_page_count,
-          uploaddate: doc.upload_date
-        };
-      });
-      setDocuments(formattedData);
-    } else {
-      setDocuments([]);
-    }
+    const formattedData = fetchedDocuments.map((doc) => ({
+      id: doc.file_id,
+      title: doc.file_name,
+      extension: doc.file_extension,
+      content: formatFileSize(doc.file_size),
+      thumbnail: doc.first_page_image
+        ? `data:image/jpeg;base64,${doc.first_page_image}`
+        : doc.page_image
+          ? `data:image/jpeg;base64,${doc.page_image}`
+          : null,
+      pages: doc.pdf_page_count,
+      uploaddate: doc.upload_date,
+      pageNumber: doc.page_number || null,
+    }));
+    setDocuments(formattedData);
   };
 
-  const handleSearch = async () => {
+  const handleSearch = useCallback(async () => {
     setIsSearching(true);
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-    setSearchError(null); // 검색 시작 시 오류 상태 초기화
+    setSearchError(null);
     const result = await fetchDocuments(searchTerm);
-
+  
     if (result.status === 404) {
-      setSearchError('검색 결과가 없습니다.'); // 검색 결과가 없을 때 오류 메시지 설정
-      setDocuments([]); // 문서 목록 초기화
+      setSearchError('검색 결과가 없습니다.');
+      setDocuments([]);
     } else if (result.status === 200) {
       formatDocuments(result.data);
     } else {
       setSearchError('오류가 발생했습니다. 나중에 다시 시도해주세요.');
     }
-
     setIsSearching(false);
+  }, [searchTerm]);
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await handleSearch();
+    setIsRefreshing(false);
   };
+
   useEffect(() => {
-    let isMounted = true; // 컴포넌트 마운트 상태 체크 변수
-    const fetchData = async () => {
-      if (isMounted) {  // 컴포넌트가 마운트된 상태에서만 데이터 가져오기
-        await handleSearch();
-      }
-    };
-    fetchData();
-    return () => {
-      isMounted = false; // 컴포넌트 언마운트 시 상태 업데이트 중지
-    };
+    // 컴포넌트가 처음 로딩될 때 검색 함수 호출
+    handleSearch();
   }, []);
-
-  const addTagToSearch = (tag) => {
-    setSearchTerm((prev) => {
-      const tagText = `${tag} `;
-      if (!prev.includes(tagText)) {
-        return `${prev}${tagText}`.trim();
-      }
-      return prev;
-    });
-  };
-=======
-    const fetchedDocuments = await fetchDocuments(searchTerm); // 검색어 포함
-    formatDocuments(fetchedDocuments);
-    setIsSearching(false);
-  };
->>>>>>> parent of 964327c (태그추가)
-=======
-    const fetchedDocuments = await fetchDocuments(searchTerm); // 검색어 포함
-    formatDocuments(fetchedDocuments);
-    setIsSearching(false);
-  };
->>>>>>> parent of 964327c (태그추가)
-=======
-    const fetchedDocuments = await fetchDocuments(searchTerm); // 검색어 포함
-    formatDocuments(fetchedDocuments);
-    setIsSearching(false);
-  };
->>>>>>> parent of 964327c (태그추가)
 
   const showModal = (modalType) => setVisibleModal(modalType);
   const hideModal = () => setVisibleModal(null);
@@ -321,119 +176,54 @@ const HomeScreen = () => {
     <Provider>
       <View style={styles.container}>
         <View style={styles.searchBarContainer}>
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-          <TouchableRipple
-            onPress={isSearching ? null : handleSearch} // 검색 중일 땐 클릭 불가
-            rippleColor="rgba(0, 0, 0, .32)"
-            borderless={true}
-          >
-            <AntDesign
-              name="search1"
-              size={20}
-              color={isSearching ? 'lightgray' : 'gray'} // 검색 중일 때 색상 변경
-              style={styles.SearchIcon}
-            />
+          <TouchableRipple onPress={isSearching ? null : handleSearch} rippleColor="rgba(0, 0, 0, .32)" borderless>
+            <AntDesign name="search1" size={20} color={isSearching ? 'lightgray' : 'gray'} style={styles.SearchIcon} />
           </TouchableRipple>
-=======
->>>>>>> parent of 964327c (태그추가)
-=======
->>>>>>> parent of 964327c (태그추가)
-=======
->>>>>>> parent of 964327c (태그추가)
           <TextInput
             style={styles.HomeTextInput}
             placeholder="검색어를 입력하세요"
             value={searchTerm}
             onChangeText={setSearchTerm}
-            mode="outlined"
-<<<<<<< HEAD
-<<<<<<< HEAD
+            underlineColorAndroid="transparent"
+            placeholderTextColor="#999"
           />
-<<<<<<< HEAD
           {searchTerm.length > 0 && (
             <TouchableRipple onPress={clearSearch}>
-              <MaterialIcons name="close" size={20} color="gray" />
+              <MaterialIcons name="close" size={26} color="gray" style={{ marginRight: 10 }} />
             </TouchableRipple>
           )}
+          <TouchableRipple onPress={() => setShowFilterDialog(true)}>
+            <MaterialIcons name="filter-list" size={26} color="gray" />
+          </TouchableRipple>
         </View>
-        <View>
-          <FlatList
-            data={tags}
-            horizontal
-            keyExtractor={(item) => item.key}
-            renderItem={({ item }) => (
-              <Chip
-                style={styles.FilterForm}
-                textStyle={styles.FilterText}
-                onPress={() => addTagToSearch(item.key)}
-              >
-                {item.label}
-              </Chip>
-            )}
-            showsHorizontalScrollIndicator={false}
-=======
->>>>>>> parent of 964327c (태그추가)
-          />
-          <Button
-            mode="contained"
-            style={styles.searchButton}
-            onPress={handleSearch}
-            loading={isSearching}
-            disabled={isSearching}
-          >
-            검색
-          </Button>
-        </View>
-<<<<<<< HEAD
-        <View style={{ borderBottomWidth: 1, borderColor: '#E0E0E0', marginVertical: 10 }} />
+
+        <FilterDialog visible={showFilterDialog} onDismiss={() => setShowFilterDialog(false)} onApply={applyFiltersToSearch} />
+
         {isSearching ? (
-          <View style={{ flex: 1, alignItems: 'center' }}>
-            <ActivityIndicator size="large" color="#1e90ff" />
+          <View style={styles.loaderContainer}>
+            <ActivityIndicator size="large" color="#6200ee" />
+            <Text>로딩 중...</Text>
           </View>
         ) : (
           <>
             {searchError && (
-              <View style={{ alignItems: 'center', marginTop: 1 }}>
-                <Text style={{ color: '#999', fontSize: 16 }}>{searchError}</Text>
+              <View style={{ padding: 10, alignItems: 'center' }}>
+                <Text style={{ color: 'red' }}>{searchError}</Text>
               </View>
             )}
-            <DocumentList documents={documents} />
+            <FlatList
+              data={documents}
+              renderItem={({ item }) => <DocumentList documents={[item]} />}
+              keyExtractor={(item) => item.id.toString()}
+              refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />}
+            />
           </>
         )}
-=======
-          <Button
-            mode="contained"
-            style={styles.searchButton}
-            onPress={handleSearch}
-            loading={isSearching}
-            disabled={isSearching}
-          >
-            검색
-          </Button>
-        </View>
-        <DocumentList documents={documents} />
->>>>>>> parent of 964327c (태그추가)
-=======
-        <DocumentList documents={documents} />
->>>>>>> parent of 964327c (태그추가)
-=======
-          />
-          <Button
-            mode="contained"
-            style={styles.searchButton}
-            onPress={handleSearch}
-            loading={isSearching}
-            disabled={isSearching}
-          >
-            검색
-          </Button>
-        </View>
-        <DocumentList documents={documents} />
->>>>>>> parent of 964327c (태그추가)
+
         <UploadModal visible={visibleModal === 'upload'} hideModal={hideModal} />
+
         <FAB.Group
+
           open={open}
           icon={open ? 'close' : 'plus'}
           actions={[
@@ -441,9 +231,16 @@ const HomeScreen = () => {
               icon: 'upload',
               label: '파일 업로드',
               onPress: () => showModal('upload'),
-            }
+              color: '#1C1C1C',
+              backgroundColor: '#ffffff',
+            },
           ]}
           onStateChange={({ open }) => setOpen(open)}
+          fabStyle={{
+            backgroundColor: '#ffffff',
+            borderColor: '#1C1C1C',
+            borderWidth: 1,
+          }}
         />
       </View>
     </Provider>

@@ -1,32 +1,15 @@
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
 // DocumentList.js
-import React from 'react';
-import { View, FlatList, Image, Text } from 'react-native';
-import { Card, Surface } from 'react-native-paper';
-import { AntDesign } from '@expo/vector-icons';
-=======
-=======
->>>>>>> parent of 964327c (태그추가)
-=======
->>>>>>> parent of 964327c (태그추가)
-///DocumentList.js
-import React from 'react';
-import { View, FlatList, Image, Text, TouchableOpacity } from 'react-native';
-import { Card } from 'react-native-paper';
-<<<<<<< HEAD
-<<<<<<< HEAD
->>>>>>> parent of 964327c (태그추가)
-=======
->>>>>>> parent of 964327c (태그추가)
-=======
->>>>>>> parent of 964327c (태그추가)
+import React, { useState, useCallback } from 'react';
+import { View, FlatList, Image, Text, TouchableOpacity, Alert } from 'react-native';
+import { Card, Divider } from 'react-native-paper';
+import { Feather } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
+import SummaryModal from '../Modal/SummaryModal';
+import { API_BASE_URL } from '@env';
 
 const styles = {
   card: {
     marginVertical: 5,
-    padding: 20,
     backgroundColor: '#ffffff',
     borderWidth: 1, // 카드 경계선 추가
     borderColor: '#ddd', // 경계선 색상 설정
@@ -37,17 +20,19 @@ const styles = {
     justifyContent: 'space-between',
   },
   imageContainer: {
+    padding: 10,
     flex: 1,
     marginRight: 15,
   },
   CardthumbnailImage: {
-    width: '100%',
-    height: 170,
-    borderRadius: 8,
+    width: '120%',
+    height: 200,
+    borderWidth: 1, // 선 두께
+    borderColor: '#ddd', // 선 색상
   },
   defaultImage: {
-    width: '100%',
-    height: 170,
+    width: '120%',
+    height: 300,
     borderRadius: 8,
     backgroundColor: '#e0e0e0',
     justifyContent: 'center',
@@ -57,225 +42,155 @@ const styles = {
     color: '#999',
     fontSize: 14,
   },
-  CardContentContainer: {
-    flex: 2,
-    justifyContent: 'center',
-  },
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
   CardTitleText: {
-    fontSize: 19,
-=======
-  cardTitle: {
-    fontSize: 15,
->>>>>>> parent of 964327c (태그추가)
-=======
-  cardTitle: {
-    fontSize: 15,
->>>>>>> parent of 964327c (태그추가)
-=======
-  cardTitle: {
-    fontSize: 15,
->>>>>>> parent of 964327c (태그추가)
+    marginLeft: 15,
+    marginTop: 18,
+    fontSize: 14,
     fontWeight: 'bold',
-    marginBottom: 8,
     color: '#222',
   },
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-  CardTypeContainer: {
-    backgroundColor: '#DF0101',
-    width: 60, 
-    height: 35, 
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  CardTypeText: {
-    color: '#fff', 
-    fontSize: 15,
-    fontWeight: 'bold',
-  },
-  CardInfoRow: {
-=======
-=======
->>>>>>> parent of 964327c (태그추가)
-=======
->>>>>>> parent of 964327c (태그추가)
-  infoRow: {
->>>>>>> parent of 964327c (태그추가)
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 20,
-    borderTopWidth: 1,
-    borderTopColor: '#eee',
-    paddingTop: 10,
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-  },  
-  CardDateText: {
+  CardIdText:
+  {
+    marginLeft: 15,
     marginTop: 10,
-    fontSize: 12,
-    color: '#aaa',
+    fontSize: 14,
+    color: '#848484',
+  },
+  CardDateText: {
+    marginLeft: 15,
+    marginTop: 10,
+    fontSize: 14,
+    color: '#848484',
   },
   CardStorageText: {
-    fontSize: 15,
-=======
+    marginLeft: 15,
+    marginTop: 10,
+    fontSize: 14,
+    color: '#848484',
   },
-  cardId: {
-    fontSize: 12,
-    color: '#aaa',
-  },
-  cardDescription: {
-    fontSize: 12,
-    color: '#aaa',
-  },
-  cardDate:{
-    fontSize: 12,
-    color: '#aaa',
-  },
-  cardPageInfo: {
-    fontSize: 12,
->>>>>>> parent of 964327c (태그추가)
-    color: '#aaa',
+  CardTypeText: {
+    marginLeft: 3,
+    fontSize: 13,
+    color: '#848484',
   },
   CardPageText: {
-    fontSize: 15,
-=======
-  },
-  cardId: {
     fontSize: 12,
-    color: '#aaa',
+    color: '#848484',
   },
-  cardDescription: {
-    fontSize: 12,
-    color: '#aaa',
+  divider: {
+    backgroundColor: '#ccc'
   },
-  cardDate:{
-    fontSize: 12,
-    color: '#aaa',
-  },
-  cardPageInfo: {
-    fontSize: 12,
->>>>>>> parent of 964327c (태그추가)
-=======
-  },
-  cardId: {
-    fontSize: 12,
-    color: '#aaa',
-  },
-  cardDescription: {
-    fontSize: 12,
-    color: '#aaa',
-  },
-  cardDate:{
-    fontSize: 12,
-    color: '#aaa',
-  },
-  cardPageInfo: {
-    fontSize: 12,
->>>>>>> parent of 964327c (태그추가)
-    color: '#aaa',
-  },
+
+  CardInfoRow: {
+    padding: 10,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  }
 };
 
 const DocumentList = ({ documents }) => {
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-  const renderItem = ({ item }) => {
-    return (
-        <Card style={styles.card}>
-          <View style={styles.contentRow}>
-            <View style={styles.imageContainer}>
-              {item.thumbnail ? (
-                <Image source={{ uri: item.thumbnail }} style={styles.CardthumbnailImage} />
-              ) : (
-                <View style={styles.defaultImage}>
-                  <Text style={styles.defaultImageText}>No Image</Text>
-                </View>
-              )}
-            </View>
-            <View style={styles.CardContentContainer}>
-              <Text style={styles.CardTitleText}>{item.title}</Text>
-              <Surface style={styles.CardTypeContainer}>
-                <Text style={styles.CardTypeText}>{item.extension}</Text>
-              </Surface>
-              <Text style={styles.CardDateText}>{item.uploaddate}</Text>
-            </View>
-=======
-=======
->>>>>>> parent of 964327c (태그추가)
-=======
->>>>>>> parent of 964327c (태그추가)
+  const [starColor, setStarColor] = useState('black');
+  const [modalVisible, setModalVisible] = useState(false);
+  const [summary, setSummary] = useState('');
+  const navigation = useNavigation();
+
+  const toggleStarColor = useCallback(() => {
+    setStarColor((prevColor) => (prevColor === 'black' ? '#FFBF00' : 'black'));
+  }, []);
+
+  const fetchSummary = useCallback(async (fileId) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/summary/api.php`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          identifier: 'genji',
+          password: 'asdf1234',
+          file_id: fileId,  // 동적으로 fileId 전달
+        }),
+      });
+  
+      if (!response.ok) {
+        throw new Error(`서버 오류: ${response.status}`);
+      }
+  
+      const data = await response.json();
+      if (data.StatusCode === 200) {
+        setSummary(data.data.summary);
+      } else {
+        Alert.alert('오류', data.message || '요약을 불러오지 못했습니다.');
+      }
+    } catch (error) {
+      console.error('네트워크 오류:', error);
+      Alert.alert('오류', '네트워크 오류가 발생했습니다.');
+    } finally {
+      setModalVisible(true);
+    }
+  }, []);
+
   const renderItem = ({ item }) => (
-    <TouchableOpacity>
+    <TouchableOpacity
+      onPress={() => navigation.navigate('DocumentViewer', {
+        fileName: item.title,
+        documentId: item.id,
+        documentPage: item.pages,
+      })}
+    >
       <Card style={styles.card}>
         <View style={styles.contentRow}>
           <View style={styles.imageContainer}>
             {item.thumbnail ? (
-              <Image source={{ uri: item.thumbnail }} style={styles.cardImage} />
+              <Image source={{ uri: item.thumbnail }} style={styles.CardthumbnailImage} />
             ) : (
               <View style={styles.defaultImage}>
                 <Text style={styles.defaultImageText}>No Image</Text>
               </View>
             )}
-<<<<<<< HEAD
-<<<<<<< HEAD
->>>>>>> parent of 964327c (태그추가)
-=======
->>>>>>> parent of 964327c (태그추가)
-=======
->>>>>>> parent of 964327c (태그추가)
           </View>
-          <View style={styles.contentContainer}>
-            <Text style={styles.cardTitle}>{item.title}</Text>     
-            <Text style={styles.cardTitle}>파일 형식: {item.extenstion}</Text>  
+          <View style={{ flexDirection: 'column', flex: 2 }}>
+            <Text style={styles.CardTitleText}>{item.title}</Text>
+            <Text style={styles.CardDateText}>날짜: {item.uploaddate}</Text>
+            <Text style={styles.CardStorageText}>용량: {item.content}</Text>
           </View>
         </View>
+        <Divider style={styles.divider} />
+        <View style={styles.CardInfoRow}>
+  <View style={{ flex: 1, alignItems: 'flex-start' }}>
+    <Text style={styles.CardTypeText}>{item.extension}</Text>
+  </View>
+  <View style={{ flex: 1, alignItems: 'center' }}>
+    <Text style={styles.CardPageText}>{item.pages}P</Text>
+  </View>
+  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', flex: 1 }}>
+    <TouchableOpacity onPress={() => fetchSummary(item.id)} style={{ marginRight: 24 }}>
+      <Feather name="file-text" size={24} color="black" />
+    </TouchableOpacity>
+    <TouchableOpacity onPress={toggleStarColor}>
+      <Feather name="star" size={24} color={starColor} />
+    </TouchableOpacity>
+  </View>
+</View>
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-          <View style={styles.CardInfoRow}>
-            <Text style={styles.CardStorageText}>{item.content}</Text>
-            <Text style={styles.CardPageText}>{item.pages}P</Text>
-            <AntDesign name="star" size={20} color="#aaa" /> 
-          </View>
-        </Card>
-    );
-  };
-=======
-=======
->>>>>>> parent of 964327c (태그추가)
-=======
->>>>>>> parent of 964327c (태그추가)
-        <View style={styles.infoRow}>
-          <Text style={styles.cardId}>ID: {item.id}</Text>
-          <Text style={styles.cardDescription}>파일크기: {item.content}</Text>
-          <Text style={styles.cardDate}>{item.uploaddate}</Text>
-          <Text style={styles.cardPageInfo}>Pages: {item.pages}</Text>
-        </View>
       </Card>
     </TouchableOpacity>
   );
-<<<<<<< HEAD
-<<<<<<< HEAD
->>>>>>> parent of 964327c (태그추가)
-=======
->>>>>>> parent of 964327c (태그추가)
-=======
->>>>>>> parent of 964327c (태그추가)
 
   return (
-    <FlatList
-      data={documents}
-      renderItem={renderItem}
-      keyExtractor={(item) => item.id}
-    />
+    <>
+      <FlatList
+        data={documents}
+        renderItem={renderItem}
+        keyExtractor={(item) => item.id}
+      />
+      <SummaryModal
+        visible={modalVisible}
+        onClose={() => setModalVisible(false)}
+        summary={summary}
+      />
+    </>
   );
 };
 

@@ -1,9 +1,11 @@
-//SettingsScreen.js
-import React, {useEffect} from 'react';
+// SettingsScreen.js
+import React, { useEffect, useContext } from 'react';
 import { View, StyleSheet, Alert, ScrollView } from 'react-native';
 import { Button, Divider, Switch, List } from 'react-native-paper';
 import { AntDesign } from '@expo/vector-icons';
 import * as SecureStore from 'expo-secure-store';
+import { useNavigation } from '@react-navigation/native'; // useNavigation 훅 사용
+import { DataContext } from '../DataContext';
 
 const styles = StyleSheet.create({
   container: {
@@ -20,9 +22,9 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   iconContainer: {
-    justifyContent: 'center', // 아이콘을 수직 가운데로 정렬
+    justifyContent: 'center',
     alignItems: 'center',
-    width: 40, // 아이콘의 영역을 고정된 크기로 설정하여 균일하게 배치
+    width: 40,
   },
   logoutbutton: {
     width: '100%',
@@ -39,32 +41,40 @@ const styles = StyleSheet.create({
 });
 
 const SettingsScreen = ({ onLogout }) => {
-  const [isNotificationsEnabled, setIsNotificationsEnabled] = React.useState(false);
+  const navigation = useNavigation(); // 네비게이션 객체 가져오기
   const [isAutoLoginEnabled, setIsAutoLoginEnabled] = React.useState(false);
-  const [isDarkThemeEnabled, setIsDarkThemeEnabled] = React.useState(false);
+  const { 
+    isDarkThemeEnabled, 
+    setIsDarkThemeEnabled, 
+    isNotificationsEnabled, 
+    setIsNotificationsEnabled 
+  } = useContext(DataContext);
 
   const toggleNotifications = () => setIsNotificationsEnabled(!isNotificationsEnabled);
-  
+  const toggleDarkTheme = () => setIsDarkThemeEnabled(!isDarkThemeEnabled);
+
   useEffect(() => {
     const loadAutoLoginSetting = async () => {
       const autoLoginStatus = await SecureStore.getItemAsync('isAutoLoginEnabled');
       setIsAutoLoginEnabled(autoLoginStatus === 'true');
     };
-  
+
     loadAutoLoginSetting();
   }, []);
-  
+
   const toggleAutoLogin = async () => {
     const newValue = !isAutoLoginEnabled;
     setIsAutoLoginEnabled(newValue);
     await SecureStore.setItemAsync('isAutoLoginEnabled', newValue ? 'true' : 'false');
   };
 
-  const toggleDarkTheme = () => setIsDarkThemeEnabled(!isDarkThemeEnabled);
-
   const handleLogout = () => {
     Alert.alert('로그아웃', '성공적으로 로그아웃되었습니다.', [
-      { text: '확인', onPress: () => onLogout() },
+      { text: '확인', onPress: async () => {
+          await onLogout(); // 로그아웃 로직 실행
+          navigation.replace('LoginPage'); // 스택을 교체하며 LoginPage로 이동
+        }
+      },
     ]);
   };
 
@@ -80,9 +90,7 @@ const SettingsScreen = ({ onLogout }) => {
               <AntDesign name="bells" size={24} color="#333" />
             </View>
           )}
-          right={() => (
-            <Switch value={isNotificationsEnabled} onValueChange={toggleNotifications} />
-          )}
+          right={() => <Switch value={isNotificationsEnabled} onValueChange={toggleNotifications} />}
           style={styles.listItem}
         />
         <Divider style={styles.divider} />
@@ -95,22 +103,7 @@ const SettingsScreen = ({ onLogout }) => {
               <AntDesign name="bulb1" size={24} color="#333" />
             </View>
           )}
-          right={() => (
-            <Switch value={isDarkThemeEnabled} onValueChange={toggleDarkTheme} />
-          )}
-          style={styles.listItem}
-        />
-        <Divider style={styles.divider} />
-
-        <List.Item
-          title="로그 기록"
-          description="사용자 활동 기록을 확인합니다."
-          left={() => (
-            <View style={styles.iconContainer}>
-              <AntDesign name="profile" size={24} color="#333" />
-            </View>
-          )}
-          onPress={() => Alert.alert('로그 기록', '사용자 로그 기록을 확인합니다.')}
+          right={() => <Switch value={isDarkThemeEnabled} onValueChange={toggleDarkTheme} />}
           style={styles.listItem}
         />
         <Divider style={styles.divider} />
@@ -142,6 +135,7 @@ const SettingsScreen = ({ onLogout }) => {
           style={styles.listItem}
         />
         <Divider style={styles.divider} />
+
         <Button
           mode="contained"
           onPress={handleLogout}

@@ -2,7 +2,8 @@
 import React, { useState, useEffect } from "react";
 import { View, Text, StyleSheet, Alert } from "react-native";
 import { Button, TextInput, Card, Title, Paragraph } from "react-native-paper";
-import { API_BASE_URL } from '@env'; // .env에서 API_BASE_URL 불러오기
+import { API_BASE_URL } from '@env'; 
+import axios from 'axios';
 import SignupModal from '../Modal/SignupModal';
 
 
@@ -58,39 +59,33 @@ export default function LoginPage({ onLogin, storedCredentials }) {
 	}, [storedCredentials]);
 
 	 // 로그인 버튼 클릭 시 호출되는 함수
-	const handleLogin = async () => {
+	 const handleLogin = async () => {
 		if (!identifier || !password) {
-			Alert.alert("경고", "아이디와 비밀번호를 모두 입력해주세요.");
-			return;
+		  Alert.alert("경고", "아이디와 비밀번호를 모두 입력해주세요.");
+		  return;
 		}
-
+	  
 		const loginData = {
-			identifier: identifier,
-			password: password,
+		  identifier: identifier,
+		  password: password,
 		};
-
+	  
 		try {
-			const response = await fetch(`${API_BASE_URL}/user/login.php`, {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify(loginData),
-			});
-
-			const data = await response.json();
-
-			if (data.StatusCode == 200) {
-				Alert.alert("로그인 성공", "홈 화면으로 이동합니다.");
-				onLogin(identifier, password); // 로그인 성공 시 아이디와 비밀번호 전달
-			} else {
-				Alert.alert("로그인 실패", "로그인에 실패했습니다. 다시 시도해 주세요.");
-			}
-		} catch (error) {
-			console.error("로그인 중 오류 발생:", error);
-			Alert.alert("오류", "로그인에 실패했습니다. 다시 시도해 주세요.");
+		  const response = await axios.post(`${API_BASE_URL}/user/login.php`, loginData, {
+			headers: { 'Content-Type': 'application/json' },
+		  });
+	  
+		  if (response.data.StatusCode === 200) {
+			Alert.alert("로그인 성공", "홈 화면으로 이동합니다.");
+			onLogin(identifier, password); // 로그인 성공 시 아이디와 비밀번호 전달
+		  } else {
+			Alert.alert("로그인 실패", "로그인에 실패했습니다. 다시 시도해 주세요.");
 		  }
-	};
+		} catch (error) {
+		  console.error("로그인 중 오류 발생:", error);
+		  Alert.alert("오류", "로그인에 실패했습니다. 다시 시도해 주세요.");
+		}
+	  };
 
 	return (
 		<View style={styles.container}>

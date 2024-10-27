@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, StyleSheet, Alert, Text, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { TextInput, Button, Title, Provider } from 'react-native-paper';
 import { API_BASE_URL } from '@env'; // .env에서 API_BASE_URL 불러오기
+import axios from 'axios';
 
 const styles = StyleSheet.create({
   signuppagetitle: {
@@ -116,30 +117,19 @@ export default function Signup2({ onSignup, onPrevious }) {
     console.log("회원가입 전송 데이터:", JSON.stringify(signupData));
   
     try {
-      const response = await fetch(`${API_BASE_URL}/user/signup.php`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(signupData),
+      const response = await axios.post(`${API_BASE_URL}/user/signup.php`, signupData, {
+        headers: { 'Content-Type': 'application/json' },
       });
   
-      const data = await response.json(); // 서버로부터 받은 JSON 데이터를 'data'로 받음
-  
-      console.log("서버 응답 데이터:", data.StatusCode);
-  
-      if (data.StatusCode === 200) 
-      {  // StatusCode가 200인 경우 성공 처리
+      if (response.data.StatusCode === 200) {
         Alert.alert('성공', '회원가입에 성공하였습니다.');
-        onSignup();  // 회원가입 성공 시 처리
-      } 
-      else
-      {
-        Alert.alert("회원가입 실패","회원가입에 실패했습니다. 다시 시도해 주세요.");
+        onSignup(); // 회원가입 성공 처리
+      } else {
+        Alert.alert('회원가입 실패', '회원가입에 실패했습니다. 다시 시도해 주세요.');
       }
     } catch (error) {
       console.error(error);
-      Alert.alert("회원가입 실패","회원가입에 실패했습니다. 다시 시도해 주세요.");
+      Alert.alert('회원가입 실패', '회원가입에 실패했습니다. 다시 시도해 주세요.');
     }
   };
 

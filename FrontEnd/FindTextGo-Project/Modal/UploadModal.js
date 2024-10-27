@@ -6,6 +6,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import { MaterialIcons } from '@expo/vector-icons';
 import * as SecureStore from 'expo-secure-store';
 import { API_BASE_URL } from '@env'; // .env에서 API_BASE_URL 불러오기
+import axios from 'axios';
 
 const styles = StyleSheet.create({
   modalContent: {
@@ -90,8 +91,11 @@ const UploadModal = ({ visible, hideModal }) => {
     'application/pdf',
     'application/msword',
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'application/vnd.ms-powerpoint',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
     'application/haansofthwp',
-    'application/zip',
   ];
 
   // 자격증명 불러오기
@@ -132,7 +136,6 @@ const UploadModal = ({ visible, hideModal }) => {
   };
 
   // 파일을 Base64로 변환하는 함수
-  // 파일을 Base64로 변환하는 함수
 const convertToBase64 = async (uri) => {
   try {
     const response = await fetch(uri);
@@ -164,39 +167,30 @@ const convertToBase64 = async (uri) => {
       setErrorMessage('로그인 정보를 불러올 수 없습니다.');
       return;
     }
-
-    // 파일 업로드에 필요한 데이터
+  
     const uploadData = {
       identifier: credentials.identifier,
       password: credentials.password,
       file_base64: selectedFile.fileBase64,
       filename: selectedFile.name || 'noname.pdf',
     };
-
-    // 전송할 데이터 확인용 console.log
+  
     console.log("파일 업로드 전송 데이터:", JSON.stringify(uploadData));
-
+  
     try {
-      // fetch로 POST 요청 보내기
-      const response = await fetch(`${API_BASE_URL}/upload/upload.php`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(uploadData),
+      const response = await axios.post(`${API_BASE_URL}/upload/upload.php`, uploadData, {
+        headers: { 'Content-Type': 'application/json' },
       });
-
-      const data = await response.json(); // 서버로부터 받은 JSON 데이터를 처리
-
-      // 서버 응답을 콘솔에 출력
-      console.log("서버 응답 데이터:", data.StatusCode);
-
-      if (data.StatusCode === 200) { // 업로드 성공 시 처리
+  
+      const data = response.data; // 응답 데이터를 바로 가져오기
+  
+      if (data.StatusCode === 200) {
         console.log('파일 업로드 성공:', data.message);
         Alert.alert('성공', '파일이 성공적으로 업로드되었습니다.');
-        hideModal(); 
+        setSelectedFile(null);
+        hideModal();
       } else {
-        console.log('파일 업로드 성공:', data.message);
+        console.log('파일 업로드 실패:', data.message);
         Alert.alert('업로드 실패', '파일 업로드에 실패했습니다.');
       }
     } catch (error) {
@@ -204,6 +198,7 @@ const convertToBase64 = async (uri) => {
       Alert.alert("업로드 실패", "파일 업로드 중 오류가 발생했습니다. 다시 시도해 주세요.");
     }
   };
+
 
   // 모달을 닫을 때 상태 초기화
   const handleClose = () => {
@@ -220,7 +215,7 @@ const convertToBase64 = async (uri) => {
         </View>
         <Text style={styles.title}>문서 업로드</Text>
         <Text style={styles.description}>
-          PDF, Word, 한글(HWP), ZIP 파일을 업로드해주세요.
+          PDF, Word, 한글(HWP), PPTX, 엑셀 파일을 업로드해주세요.
         </Text>
 
         <TouchableOpacity style={styles.fileDropArea} onPress={pickDocument}>

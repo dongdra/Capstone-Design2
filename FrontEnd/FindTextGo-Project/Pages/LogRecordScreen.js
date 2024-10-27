@@ -1,20 +1,22 @@
 // LogRecordScreen.js
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
+import ActivityLogScreen from './ActivityLogScreen';
+import FavoritesScreen from './FavoritesScreen';
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-  },
-});
+const Tab = createMaterialTopTabNavigator();
 
 const LogRecordScreen = () => (
-  <View style={styles.container}>
-    <Text>로그 기록 화면입니다.</Text>
-  </View>
+  <Tab.Navigator
+    screenOptions={{
+      tabBarLabelStyle: { fontSize: 16 },
+      tabBarStyle: { backgroundColor: '#A4A4A4' },
+      tabBarIndicatorStyle: { backgroundColor: '#fff', height: 3 },
+    }}
+  >
+    <Tab.Screen name="활동로그" component={ActivityLogScreen} />
+    <Tab.Screen name="즐겨찾기" component={FavoritesScreen} />
+  </Tab.Navigator>
 );
 
 export default LogRecordScreen;
