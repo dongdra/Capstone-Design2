@@ -3,9 +3,13 @@ import argparse
 import json
 import re
 import os
+from dotenv import load_dotenv
+
+# .env 파일에서 환경 변수 불러오기
+load_dotenv('./.env')
 
 # Gemini API 설정
-APIKEY = os.environ.get('API_KEY')
+APIKEY = os.getenv('API_KEY')
 genai.configure(api_key=APIKEY)
 
 def summarize_pdf(pdf_path):
