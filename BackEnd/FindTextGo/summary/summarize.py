@@ -2,6 +2,7 @@ import google.generativeai as genai
 import argparse
 import json
 import re
+import os
 
 # Gemini API 설정
 APIKEY = os.environ.get('API_KEY')
