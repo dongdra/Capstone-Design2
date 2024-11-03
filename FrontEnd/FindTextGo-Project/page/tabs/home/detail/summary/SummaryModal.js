@@ -3,29 +3,6 @@ import React from 'react';
 import { Modal, View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 
-const SummaryModal = ({ visible, onClose, summary }) => {
-  return (
-    <Modal visible={visible} transparent={true} animationType="slide">
-      <View style={styles.modalBackground}>
-        <View style={styles.modalContainer}>
-          <View style={styles.header}>
-            <Text style={styles.title}>문서 요약</Text>
-            <TouchableOpacity onPress={onClose}>
-              <Feather name="x" size={24} color="#555" />
-            </TouchableOpacity>
-          </View>
-
-          <ScrollView style={styles.summaryContainer}>
-            <Text style={styles.summaryText}>
-              {summary || '요약을 불러오는 중...'}
-            </Text>
-          </ScrollView>
-        </View>
-      </View>
-    </Modal>
-  );
-};
-
 const styles = StyleSheet.create({
   modalBackground: {
     flex: 1,
@@ -65,5 +42,30 @@ const styles = StyleSheet.create({
     lineHeight: 24, // 가독성을 높이기 위한 줄 간격
   },
 });
+
+const SummaryModal = ({ visible, onClose, summary }) => {
+  return (
+    <Modal visible={visible} transparent={true} animationType="slide">
+      <View style={styles.modalBackground}>
+        <View style={styles.modalContainer}>
+          <View style={styles.header}>
+            <Text style={styles.title}>문서 요약</Text>
+            <TouchableOpacity onPress={onClose}>
+              <Feather name="x" size={24} color="#555" />
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView style={styles.summaryContainer}>
+            <Text style={styles.summaryText}>
+              {summary || '요약을 불러오는 중...'}
+            </Text>
+          </ScrollView>
+        </View>
+      </View>
+    </Modal>
+  );
+};
+
+
 
 export default SummaryModal;

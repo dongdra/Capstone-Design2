@@ -64,6 +64,7 @@ const FilterDialog = ({ visible, onDismiss, onApply }) => {
   const filterOptions = {
     fileAttributes: ['filetype:', 'size:', 'filename:'],
     pageCount: ['pages'],
+    ocrsearches: ['text:']
   };
 
   const formatDate = (date) => (date ? date.toLocaleDateString() : '날짜 선택');
@@ -117,6 +118,16 @@ const FilterDialog = ({ visible, onDismiss, onApply }) => {
             <Text style={styles.sectionTitle}>페이지 수</Text>
             <FlatList
               data={filterOptions.pageCount}
+              keyExtractor={(item) => item}
+              renderItem={renderChip}
+              numColumns={3}
+              scrollEnabled={false}
+            />
+          </View>
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>키워드 검색</Text>
+            <FlatList
+              data={filterOptions.ocrsearches}
               keyExtractor={(item) => item}
               renderItem={renderChip}
               numColumns={3}

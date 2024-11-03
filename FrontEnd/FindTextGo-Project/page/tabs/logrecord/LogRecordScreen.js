@@ -1,8 +1,8 @@
 // LogRecordScreen.js
 import React from 'react';
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
-import ActivityLogScreen from './ActivityLogScreen';
-import FavoritesScreen from './FavoritesScreen';
+import ActivityLogScreen from './topbar/ActivityLogScreen';
+import FavoritesScreen from './topbar/FavoritesScreen';
 
 const Tab = createMaterialTopTabNavigator();
 

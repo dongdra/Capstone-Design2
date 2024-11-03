@@ -11,11 +11,13 @@ import {
 } from 'react-native';
 import { FAB, Provider, TouchableRipple } from 'react-native-paper';
 import { AntDesign, MaterialIcons } from '@expo/vector-icons';
-import UploadModal from '../Modal/UploadModal';
-import FilterDialog from './FilterDialog';
-import DocumentList from './DocumentList';
+import UploadModal from './upload/UploadModal';
+import FilterDialog from './filter/FilterDialog';
+import DocumentList from './detail/DocumentList';
 import * as SecureStore from 'expo-secure-store';
 import { API_BASE_URL } from '@env';
+import { useFocusEffect } from '@react-navigation/native';
+import { addLog } from '../../../logService';
 import axios from 'axios';
 
 const styles = StyleSheet.create({
@@ -138,6 +140,7 @@ const HomeScreen = () => {
       pages: doc.pdf_page_count,
       uploaddate: doc.upload_date,
       pageNumber: doc.page_number || null,
+      ocr_results: doc.ocr_results || [],
     }));
     setDocuments(formattedData);
   };
@@ -163,11 +166,20 @@ const HomeScreen = () => {
     await handleSearch();
     setIsRefreshing(false);
   };
+  
 
   useEffect(() => {
-    // 컴포넌트가 처음 로딩될 때 검색 함수 호출
     handleSearch();
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      const logVisit = async () => {
+        await addLog('홈 페이지에 접속했습니다.');
+      };
+      logVisit();
+    }, [])
+  );
 
   const showModal = (modalType) => setVisibleModal(modalType);
   const hideModal = () => setVisibleModal(null);

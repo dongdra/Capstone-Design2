@@ -4,8 +4,8 @@ import { View, Text, StyleSheet, Alert } from "react-native";
 import { Button, TextInput, Card, Title, Paragraph } from "react-native-paper";
 import { API_BASE_URL } from '@env'; 
 import axios from 'axios';
-import SignupModal from '../Modal/SignupModal';
-
+import SignupModal from '../signup/SignupModal';
+import { addLog } from '../logService';
 
 const styles = StyleSheet.create({
 	container: {
@@ -77,7 +77,8 @@ export default function LoginPage({ onLogin, storedCredentials }) {
 	  
 		  if (response.data.StatusCode === 200) {
 			Alert.alert("로그인 성공", "홈 화면으로 이동합니다.");
-			onLogin(identifier, password); // 로그인 성공 시 아이디와 비밀번호 전달
+			await addLog(`로그인 성공을 하였습니다.`);
+			onLogin(identifier, password); 
 		  } else {
 			Alert.alert("로그인 실패", "로그인에 실패했습니다. 다시 시도해 주세요.");
 		  }

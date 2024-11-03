@@ -1,11 +1,13 @@
 // SettingsScreen.js
-import React, { useEffect, useContext } from 'react';
+import React, { useEffect, useContext, useCallback } from 'react';
 import { View, StyleSheet, Alert, ScrollView } from 'react-native';
 import { Button, Divider, Switch, List } from 'react-native-paper';
 import { AntDesign } from '@expo/vector-icons';
 import * as SecureStore from 'expo-secure-store';
 import { useNavigation } from '@react-navigation/native'; // useNavigation 훅 사용
-import { DataContext } from '../DataContext';
+import { DataContext } from '../../../DataContext';
+import { useFocusEffect } from '@react-navigation/native';
+import { addLog } from '../../../logService';
 
 const styles = StyleSheet.create({
   container: {
@@ -50,8 +52,18 @@ const SettingsScreen = ({ onLogout }) => {
     setIsNotificationsEnabled 
   } = useContext(DataContext);
 
+
   const toggleNotifications = () => setIsNotificationsEnabled(!isNotificationsEnabled);
   const toggleDarkTheme = () => setIsDarkThemeEnabled(!isDarkThemeEnabled);
+
+  useFocusEffect(
+    useCallback(() => {
+      const logVisit = async () => {
+        await addLog('설정 페이지에 방문했습니다.');
+      };
+      logVisit();
+    }, [])
+  );
 
   useEffect(() => {
     const loadAutoLoginSetting = async () => {
@@ -61,6 +73,8 @@ const SettingsScreen = ({ onLogout }) => {
 
     loadAutoLoginSetting();
   }, []);
+
+
 
   const toggleAutoLogin = async () => {
     const newValue = !isAutoLoginEnabled;

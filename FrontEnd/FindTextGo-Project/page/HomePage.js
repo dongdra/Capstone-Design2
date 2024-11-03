@@ -1,18 +1,16 @@
-// Home.js
+// HomePage.js
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { AntDesign } from '@expo/vector-icons';
 import { KeyboardAvoidingView, Platform, View } from 'react-native';
-import HomeScreen from './HomeScreen';
-import LogRecordScreen from './LogRecordScreen';
-import ProfileScreen from './ProfileScreen';
-import SettingsScreen from './SettingsScreen';
+import HomeScreen from './tabs/home/HomeScreen';
+import LogRecordScreen from './tabs/logrecord/LogRecordScreen';
+import ProfileScreen from './tabs/profile/ProfileScreen';
+import SettingsScreen from './tabs/settings/SettingsScreen';
 
 const Tab = createBottomTabNavigator();
 
 export default function Home({ onLogout }) {
-
-
   return (
     <KeyboardAvoidingView
     style={{ flex: 1 }}

@@ -1,11 +1,13 @@
 // DocumentViewer.js
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, Text, ActivityIndicator, StyleSheet, TextInput, TouchableOpacity, Alert, Image } from 'react-native';
 import ImageViewer from 'react-native-image-zoom-viewer';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { API_BASE_URL } from '@env';
 import axios from 'axios'; 
 import * as SecureStore from 'expo-secure-store';
+import { useFocusEffect } from '@react-navigation/native';
+import { addLog } from '../../../../../logService';
 
 const styles = StyleSheet.create({
   searchSection: {
@@ -57,7 +59,7 @@ async function getCredentials() {
 }
 
 const DocumentViewer = ({ route }) => {
-  const { documentId, documentPage } = route.params;
+  const { documentId, documentPage, fileName } = route.params;
   const [images, setImages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -67,6 +69,14 @@ const DocumentViewer = ({ route }) => {
   const isMounted = useRef(true);
   const imageRef = useRef(null);
   
+  useFocusEffect(
+    useCallback(() => {
+      const logVisit = async () => {
+        await addLog(`${fileName} 문서에 접속했습니다.`);
+      };
+      logVisit();
+    }, [fileName])
+  );
 
   // 이미지 불러오기 함수
   const fetchImages = async () => {
@@ -80,7 +90,7 @@ const DocumentViewer = ({ route }) => {
         if (response.status === 200 && isMounted.current) {
           imageList.push({ url: imageUrl });
         } else {
-          console.warn(`페이지 ${pageNumber}에 해당하는 이미지를 찾을 수 없습니다.`);
+          //console.warn(`페이지 ${pageNumber}에 해당하는 이미지를 찾을 수 없습니다.`);
         }
       }
   

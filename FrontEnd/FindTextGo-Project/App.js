@@ -1,14 +1,14 @@
 // App.js
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Text, Alert, ActivityIndicator  } from 'react-native';
+import { View, StyleSheet, Text, Alert, ActivityIndicator } from 'react-native';
 import { Provider } from 'react-native-paper';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import * as SecureStore from 'expo-secure-store';
-import HomePage from './Pages/HomePage';
-import LoginPage from './Pages/LoginPage';
-import DocumentViewer from './Pages/DocumentViewer';
-import { DataProvider } from './DataContext'; // DataProvider 임포트
+import HomePage from './page/HomePage';
+import LoginPage from './page/LoginPage';
+import DocumentViewer from './page/tabs/home/detail/viewer/DocumentViewer';
+import { DataProvider } from './DataContext';
 import * as SplashScreen from 'expo-splash-screen';
 
 const Stack = createStackNavigator();
@@ -37,11 +37,11 @@ export default function App() {
       try {
         // 스플래시 화면 유지
         await SplashScreen.preventAutoHideAsync();
-        
+
         const storedIdentifier = await SecureStore.getItemAsync('identifier');
         const storedPassword = await SecureStore.getItemAsync('password');
         const autoLoginStatus = await SecureStore.getItemAsync('isAutoLoginEnabled');
-  
+
         if (autoLoginStatus === 'true' && storedIdentifier && storedPassword) {
           setStoredCredentials({ identifier: storedIdentifier, password: storedPassword });
           setIsAutoLoginEnabled(true);
@@ -54,7 +54,7 @@ export default function App() {
         await SplashScreen.hideAsync();
       }
     };
-  
+
     prepareApp();
   }, []);
 
@@ -97,9 +97,9 @@ export default function App() {
   if (loading) {
     return (
       <View style={styles.loaderContainer}>
-      <ActivityIndicator size="large" color="#6200ee" />
-      <Text>로딩 중...</Text>
-    </View>
+        <ActivityIndicator size="large" color="#6200ee" />
+        <Text>로딩 중...</Text>
+      </View>
     );
   }
 
@@ -109,12 +109,12 @@ export default function App() {
         <Provider>
           <Stack.Navigator>
             {isLoggedIn ? (
-            <Stack.Screen 
-            name="HomePage" 
-            options={{ title: '' }}  
-          >
-            {() => <HomePage onLogout={handleLogout} />}
-          </Stack.Screen>
+              <Stack.Screen
+                name="HomePage"
+                options={{ title: '' }}
+              >
+                {() => <HomePage onLogout={handleLogout} />}
+              </Stack.Screen>
             ) : (
               <Stack.Screen
                 name="LoginPage"
@@ -128,11 +128,11 @@ export default function App() {
                 )}
               </Stack.Screen>
             )}
-           <Stack.Screen
-  name="DocumentViewer"
-  component={DocumentViewer}
-  options={{ title: '문서 페이지' }}
-/>
+            <Stack.Screen
+              name="DocumentViewer"
+              component={DocumentViewer}
+              options={{ title: '문서 페이지' }}
+            />
           </Stack.Navigator>
         </Provider>
       </DataProvider>

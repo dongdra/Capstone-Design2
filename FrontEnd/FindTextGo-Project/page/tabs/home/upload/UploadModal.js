@@ -1,12 +1,14 @@
 // UploadModal.js
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Modal, Button, Text, Portal } from 'react-native-paper';
 import { StyleSheet, View, TouchableOpacity, Alert } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import { MaterialIcons } from '@expo/vector-icons';
 import * as SecureStore from 'expo-secure-store';
-import { API_BASE_URL } from '@env'; // .env에서 API_BASE_URL 불러오기
+import { API_BASE_URL } from '@env'; 
 import axios from 'axios';
+import { useFocusEffect } from '@react-navigation/native';
+import { addLog } from '../../../../logService';
 
 const styles = StyleSheet.create({
   modalContent: {
@@ -85,6 +87,17 @@ const UploadModal = ({ visible, hideModal }) => {
   const [errorMessage, setErrorMessage] = useState('');
   const [selectedFile, setSelectedFile] = useState(null);
   const [credentials, setCredentials] = useState({ identifier: '', password: '' });
+  
+
+  useFocusEffect(
+    useCallback(() => {
+      const logVisit = async () => {
+        await addLog('업로드 페이지에 접속했습니다.');
+      };
+      logVisit();
+    }, [])
+  );
+  
 
   // 허용하는 파일 형식 (이미지 제외)
   const allowedFileTypes = [
@@ -106,7 +119,11 @@ const UploadModal = ({ visible, hideModal }) => {
       setCredentials({ identifier, password });
     };
     fetchCredentials();
+
+    
   }, []);
+
+  
 
   // 파일 선택 핸들러
   const pickDocument = async () => {
@@ -251,6 +268,7 @@ const convertToBase64 = async (uri) => {
       </Modal>
     </Portal>
   );
+  
 };
 
 export default UploadModal;
