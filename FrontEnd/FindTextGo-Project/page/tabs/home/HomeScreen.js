@@ -33,6 +33,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     elevation: 5,
     paddingHorizontal: 10,
+    borderColor: '#6E6E6E',  // 빨간색 테두리 색상 설정
+    borderWidth: 1,      // 테두리 두께 설정
+    borderRadius: 4,     // 테두리 모서리 둥글게
   },
   SearchIcon: {
     marginLeft: 8,

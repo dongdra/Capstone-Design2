@@ -1,6 +1,6 @@
 // DocumentViewer.js
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, Text, ActivityIndicator, StyleSheet, TextInput, TouchableOpacity, Alert, Image } from 'react-native';
+import { View, Text, ActivityIndicator, StyleSheet, TextInput, TouchableOpacity, Alert, Image, Platform } from 'react-native';
 import ImageViewer from 'react-native-image-zoom-viewer';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { API_BASE_URL } from '@env';
@@ -19,8 +19,9 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
+    borderColor: '#6E6E6E',
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderRadius: 4,
     padding: 10,
     borderRadius: 5,
     marginRight: 10,
@@ -89,8 +90,6 @@ const DocumentViewer = ({ route }) => {
   
         if (response.status === 200 && isMounted.current) {
           imageList.push({ url: imageUrl });
-        } else {
-          //console.warn(`페이지 ${pageNumber}에 해당하는 이미지를 찾을 수 없습니다.`);
         }
       }
   
@@ -106,7 +105,7 @@ const DocumentViewer = ({ route }) => {
   // OCR 검색 함수
   const searchOCR = async () => {
     try {
-      const { identifier, password } = await getCredentials(); // 인증 정보 가져오기
+      const { identifier, password } = await getCredentials();
   
       const response = await axios.post(`${API_BASE_URL}/search/api.php`, {
         identifier,
@@ -144,43 +143,47 @@ const DocumentViewer = ({ route }) => {
     }
   };
 
-
   // 이미지 로드 시 원본 해상도 감지
   const handleImageLoad = (event) => {
     const { width, height } = event.nativeEvent.source;
     setOriginalSize({ width, height });
   };
 
-  // 좌표 조정 함수
-  const getAdjustedCoordinates = (coord, originalWidth, originalHeight, displayWidth, displayHeight) => {
-    const scaleX = displayWidth / originalWidth;  // X축 배율 계산
-    const scaleY = displayHeight / originalHeight;  // Y축 배율 계산
-  
-    // 2배로 줄인 좌표 계산
-    const reducedX = coord.x / 2;
-    const reducedY = coord.y / 2;
-    const reducedWidth = coord.width / 1.5;
-    const reducedHeight = coord.height / 1.5;
-  
-    // 조정된 좌표 반환 (여백 보정 필요 시 추가 가능)
+  // 안드로이드용 좌표 조정 함수
+  const getAndroidAdjustedCoordinates = (coord, originalWidth, originalHeight, displayWidth, displayHeight) => {
+    const scaleX = displayWidth / originalWidth;
+    const scaleY = displayHeight / originalHeight;
     return {
-      x: reducedX * scaleX,  // 조정된 X 좌표
-      y: reducedY * scaleY,  // 조정된 Y 좌표
-      width: reducedWidth * scaleX,  // 조정된 너비
-      height: reducedHeight * scaleY,  // 조정된 높이
+      x: coord.x / 2 * scaleX,
+      y: coord.y / 2 * scaleY,
+      width: coord.width / 1.5 * scaleX,
+      height: coord.height / 1.5 * scaleY,
     };
   };
-  
-  const renderBoundingBoxes = () => {
+
+  // iOS용 좌표 조정 함수
+  const getIosAdjustedCoordinates = (coord, originalWidth, originalHeight, displayWidth, displayHeight) => {
+    const scaleX = displayWidth / originalWidth;
+    const scaleY = displayHeight / originalHeight;
+    return {
+      x: coord.x / 4.2 * scaleX,
+      y: coord.y / 4.2 * scaleY,
+      width: coord.width / 2.8 * scaleX,
+      height: coord.height / 2.8 * scaleY,
+    };
+  };
+
+  // 바운딩 박스 렌더링 함수 (안드로이드)
+  const renderAndroidBoundingBoxes = () => {
     return coordinatesList
-      .filter(coord => coord.pageNumber === currentIndex)  // 현재 페이지의 좌표만 필터링
+      .filter(coord => coord.pageNumber === currentIndex)
       .map((coord, index) => {
-        const { x, y, width, height } = getAdjustedCoordinates(
+        const { x, y, width, height } = getAndroidAdjustedCoordinates(
           coord,
-          originalSize.width,  // 원본 이미지의 너비
-          originalSize.height,  // 원본 이미지의 높이
-          imageRef.current?.width || 1,  // 화면에 표시된 이미지의 너비
-          imageRef.current?.height || 1  // 화면에 표시된 이미지의 높이
+          originalSize.width,
+          originalSize.height,
+          imageRef.current?.width || 1,
+          imageRef.current?.height || 1
         );
   
         return (
@@ -188,13 +191,38 @@ const DocumentViewer = ({ route }) => {
             key={index}
             style={[
               styles.boundingBox,
-              { top: y, left: x, width, height }  // 조정된 좌표로 경계 상자 렌더링
+              { top: y, left: x, width, height }
             ]}
           />
         );
       });
   };
-  // 마운트 상태 관리
+
+  // 바운딩 박스 렌더링 함수 (iOS)
+  const renderIosBoundingBoxes = () => {
+    return coordinatesList
+      .filter(coord => coord.pageNumber === currentIndex)
+      .map((coord, index) => {
+        const { x, y, width, height } = getIosAdjustedCoordinates(
+          coord,
+          originalSize.width,
+          originalSize.height,
+          imageRef.current?.width || 1,
+          imageRef.current?.height || 1
+        );
+  
+        return (
+          <View
+            key={index}
+            style={[
+              styles.boundingBox,
+              { top: y, left: x, width, height }
+            ]}
+          />
+        );
+      });
+  };
+
   useEffect(() => {
     isMounted.current = true;
     fetchImages();
@@ -220,9 +248,9 @@ const DocumentViewer = ({ route }) => {
 
       {loading ? (
        <View style={styles.loaderContainer}>
-       <ActivityIndicator size="large" color="#6200ee" />
-       <Text>로딩 중...</Text>
-     </View>
+         <ActivityIndicator size="large" color="#6200ee" />
+         <Text>로딩 중...</Text>
+       </View>
       ) : (
         <View style={{ flex: 1 }}>
           <ImageViewer
@@ -244,7 +272,7 @@ const DocumentViewer = ({ route }) => {
                   resizeMode="contain"
                   onLoad={handleImageLoad}
                 />
-                {renderBoundingBoxes()}
+                {Platform.OS === 'ios' ? renderIosBoundingBoxes() : renderAndroidBoundingBoxes()}
               </View>
             )}
           />
@@ -253,7 +281,5 @@ const DocumentViewer = ({ route }) => {
     </GestureHandlerRootView>
   );
 };
-
-
 
 export default DocumentViewer;

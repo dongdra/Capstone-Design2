@@ -1,11 +1,12 @@
 // LoginPage.js
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect,useContext  } from "react";
 import { View, Text, StyleSheet, Alert } from "react-native";
 import { Button, TextInput, Card, Title, Paragraph } from "react-native-paper";
 import { API_BASE_URL } from '@env'; 
 import axios from 'axios';
 import SignupModal from '../signup/SignupModal';
 import { addLog } from '../logService';
+import { DataContext } from '../DataContext'; // DataContext import
 
 const styles = StyleSheet.create({
 	container: {
@@ -45,93 +46,98 @@ const styles = StyleSheet.create({
 	},
 });
 
+
 export default function LoginPage({ onLogin, storedCredentials }) {
-	const [isSignupVisible, setSignupVisible] = useState(false); // 회원가입 모달 상태 추가
-	const [identifier, setIdentifier] = useState(storedCredentials?.identifier || ""); // 저장된 아이디 사용
-	const [password, setPassword] = useState(storedCredentials?.password || ""); // 저장된 비밀번호 사용
+	const [isSignupVisible, setSignupVisible] = useState(false); 
+	const [identifier, setIdentifier] = useState(""); 
+	const [password, setPassword] = useState(""); 
 	const [showPassword, setShowPassword] = useState(false);
-
-	// 저장된 자격증명이 있으면 자동 로그인 시도
+	
+	const { saveCredentials } = useContext(DataContext); // DataContext에서 saveCredentials 불러오기
+  
 	useEffect(() => {
-		if (storedCredentials) {			
-			handleLogin();// 자격증명이 있으면 로그인 시도
-		}
+	  if (storedCredentials?.identifier && storedCredentials?.password) {
+		setIdentifier(storedCredentials.identifier);
+		setPassword(storedCredentials.password);
+	  }
 	}, [storedCredentials]);
-
-	 // 로그인 버튼 클릭 시 호출되는 함수
-	 const handleLogin = async () => {
-		if (!identifier || !password) {
-		  Alert.alert("경고", "아이디와 비밀번호를 모두 입력해주세요.");
-		  return;
-		}
-	  
-		const loginData = {
-		  identifier: identifier,
-		  password: password,
-		};
-	  
-		try {
-		  const response = await axios.post(`${API_BASE_URL}/user/login.php`, loginData, {
-			headers: { 'Content-Type': 'application/json' },
-		  });
-	  
-		  if (response.data.StatusCode === 200) {
-			Alert.alert("로그인 성공", "홈 화면으로 이동합니다.");
-			await addLog(`로그인 성공을 하였습니다.`);
-			onLogin(identifier, password); 
-		  } else {
-			Alert.alert("로그인 실패", "로그인에 실패했습니다. 다시 시도해 주세요.");
-		  }
-		} catch (error) {
-		  console.error("로그인 중 오류 발생:", error);
-		  Alert.alert("오류", "로그인에 실패했습니다. 다시 시도해 주세요.");
-		}
+  
+	const handleLogin = async () => {
+	  if (!identifier || !password) {
+		Alert.alert("경고", "아이디와 비밀번호를 모두 입력해주세요.");
+		return;
+	  }
+  
+	  const loginData = {
+		identifier: identifier,
+		password: password,
 	  };
-
+  
+	  try {
+		const response = await axios.post(`${API_BASE_URL}/user/login.php`, loginData, {
+		  headers: { 'Content-Type': 'application/json' },
+		});
+  
+		if (response.data.StatusCode === 200) {
+		  Alert.alert("로그인 성공", "홈 화면으로 이동합니다.");
+		  await addLog(`로그인 성공을 하였습니다.`);
+  
+		  // 로그인 성공 시 DataContext에 자격 증명을 저장하고, onLogin 호출
+		  await saveCredentials(identifier, password);
+		  onLogin(identifier, password); 
+		} else {
+		  Alert.alert("로그인 실패", "로그인에 실패했습니다. 다시 시도해 주세요.");
+		}
+	  } catch (error) {
+		console.error("로그인 중 오류 발생:", error);
+		Alert.alert("오류", "로그인에 실패했습니다. 다시 시도해 주세요.");
+	  }
+	};
+  
 	return (
-		<View style={styles.container}>
-			<Card style={styles.card}>
-				<Card.Content>
-					<Title style={styles.title}>로그인</Title>
-
-					<TextInput
-						mode="outlined"
-						label="아이디"
-						placeholder="아이디를 입력하세요"
-						value={identifier}
-						onChangeText={setIdentifier}
-						style={styles.input}
-					/>
-
-					<TextInput
-						mode="outlined"
-						label="비밀번호"
-						placeholder="비밀번호를 입력하세요"
-						secureTextEntry={!showPassword}
-						value={password}
-						onChangeText={setPassword}
-						style={styles.input}
-						right={
-							<TextInput.Icon
-								icon={showPassword ? "eye-off" : "eye"}
-								onPress={() => setShowPassword(!showPassword)}
-							/>
-						}
-					/>
-
-					<Button mode="contained" onPress={handleLogin} labelStyle={{ fontSize: 16 }} style={styles.loginbutton}>
-						로그인
-					</Button>
-
-					<Paragraph style={styles.footerText}>
-						계정이 없으신가요?{" "}
-						<Text style={styles.link} onPress={() => setSignupVisible(true)}>
-							회원가입
-						</Text>
-					</Paragraph>
-				</Card.Content>
-			</Card>
-			<SignupModal visible={isSignupVisible} onDismiss={() => setSignupVisible(false)} />
-		</View>
+	  <View style={styles.container}>
+		<Card style={styles.card}>
+		  <Card.Content>
+			<Title style={styles.title}>로그인</Title>
+  
+			<TextInput
+			  mode="outlined"
+			  label="아이디"
+			  placeholder="아이디를 입력하세요"
+			  value={identifier}
+			  onChangeText={setIdentifier}
+			  style={styles.input}
+			/>
+  
+			<TextInput
+			  mode="outlined"
+			  label="비밀번호"
+			  placeholder="비밀번호를 입력하세요"
+			  secureTextEntry={!showPassword}
+			  value={password}
+			  onChangeText={setPassword}
+			  style={styles.input}
+			  right={
+				<TextInput.Icon
+				  icon={showPassword ? "eye-off" : "eye"}
+				  onPress={() => setShowPassword(!showPassword)}
+				/>
+			  }
+			/>
+  
+			<Button mode="contained" onPress={handleLogin} labelStyle={{ fontSize: 16 }} style={styles.loginbutton}>
+			  로그인
+			</Button>
+  
+			<Paragraph style={styles.footerText}>
+			  계정이 없으신가요?{" "}
+			  <Text style={styles.link} onPress={() => setSignupVisible(true)}>
+				회원가입
+			  </Text>
+			</Paragraph>
+		  </Card.Content>
+		</Card>
+		<SignupModal visible={isSignupVisible} onDismiss={() => setSignupVisible(false)} />
+	  </View>
 	);
-}
+  }

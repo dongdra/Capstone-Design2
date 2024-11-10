@@ -4,12 +4,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const FAVORITES_KEY = 'favorite_documents';
 
 // 즐겨찾기 추가
-export const addFavorite = async (documentId, documentTitle) => {
+export const addFavorite = async (documentId, documentTitle,documentPage) => {
   try {
     const favorites = await getFavorites();
     const isFavoriteExists = favorites.some((doc) => doc.id === documentId);
     if (!isFavoriteExists) {
-      favorites.push({ id: documentId, title: documentTitle }); // ID와 제목만 저장
+      favorites.push({ id: documentId, title: documentTitle, pages: documentPage }); // ID와 제목만 저장
       await AsyncStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites));
     }
   } catch (error) {

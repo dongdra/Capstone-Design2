@@ -118,14 +118,14 @@ const DocumentList = ({ documents }) => {
     fetchCredentials();
   }, []);
 
-  const toggleFavorite = useCallback(async (documentId, documentTitle) => {
+  const toggleFavorite = useCallback(async (documentId, documentTitle, documentPage) => {
     try {
       const favorites = await getFavorites();
       if (favorites.some(doc => doc.id === documentId)) {
         await removeFavorite(documentId);
         setStarColor('black');
       } else {
-        await addFavorite(documentId, documentTitle); // 제목 추가
+        await addFavorite(documentId, documentTitle, documentPage); 
         setStarColor('#FFBF00');
       }
     } catch (error) {
@@ -169,7 +169,7 @@ const DocumentList = ({ documents }) => {
   const renderItem = ({ item }) => (
     <TouchableOpacity
       onPress={() => navigation.navigate('DocumentViewer', {
-        fileName: item.title, // fileName으로 전달
+        fileName: item.title, 
         documentId: item.id,
         documentPage: item.pages,
       })}
@@ -214,7 +214,7 @@ const DocumentList = ({ documents }) => {
             <TouchableOpacity onPress={() => fetchSummary(item.id)} style={{ marginRight: 20 }}>
               <Feather name="file-text" size={24} color="black" />
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => toggleFavorite(item.id, item.title)}>
+            <TouchableOpacity onPress={() => toggleFavorite(item.id, item.title, item.pages)}>
             <Feather name="star" size={24} color={starColor} />
           </TouchableOpacity>
           </View>
