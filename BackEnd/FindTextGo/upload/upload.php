@@ -273,49 +273,25 @@ function savePDFFile($conn, $user, $filepath, $filename, $fileExtension)
         $fileExistsResult = $fileExistsStmt->get_result();
 
         if ($fileExistsResult->num_rows > 0) {
-            throw new Exception('이미 업로드한 파일입니다.');
+            // 이미 존재하는 경우 기존 file_id 사용
+            $existingFile = $fileExistsResult->fetch_assoc();
+            $fileId = $existingFile['file_id'];
+        } else {
+            // 새로운 파일 저장
+            $insertFileQuery = "INSERT INTO file_info (file_hash, file_extension, file_size, pdf_page_count, image_processed_count) VALUES (?, ?, ?, ?, 0)";
+            $insertFileStmt = $conn->prepare($insertFileQuery);
+            $fileSize = filesize($filepath);
+            $insertFileStmt->bind_param("ssii", $fileHash, $fileExtension, $fileSize, $pageCount);
+            $insertFileStmt->execute();
+            $fileId = $insertFileStmt->insert_id;
         }
 
-        // 파일 정보 저장
-        $insertFileQuery = "INSERT INTO file_info (file_hash, file_extension, file_size, pdf_page_count, image_processed_count) VALUES (?, ?, ?, ?, 0)";
-        $insertFileStmt = $conn->prepare($insertFileQuery);
-        $fileSize = filesize($filepath);
-        $insertFileStmt->bind_param("ssii", $fileHash, $fileExtension, $fileSize, $pageCount);
-        $insertFileStmt->execute();
-
-        $fileId = $insertFileStmt->insert_id;
-
+        // 업로드 기록 추가
         $sanitizedFileName = sanitizeFileName($filename);
         $insertUploadQuery = "INSERT INTO file_uploads (file_id, user_id, file_name) VALUES (?, ?, ?)";
         $insertUploadStmt = $conn->prepare($insertUploadQuery);
         $insertUploadStmt->bind_param("iis", $fileId, $userId, $sanitizedFileName);
         $insertUploadStmt->execute();
-
-        // 파일 저장 경로 설정
-        $documentsDir = '../documents/' . $fileId;
-        if (!is_dir($documentsDir)) {
-            mkdir($documentsDir, 0777, true);
-        }
-
-        // 파일 이동
-        $filePath = $documentsDir . '/' . $fileId . '.pdf';
-        if (!rename($filepath, $filePath)) {
-            throw new Exception('파일 저장 중 오류가 발생했습니다.');
-        }
-
-        // 이미지 변환 실행 및 변환된 이미지 수 확인
-        $processedCount = processImages($filePath, $documentsDir, $pageCount, $user['username']);
-
-        if ($processedCount === false) {
-            throw new Exception('이미지 변환 처리 중 오류가 발생했습니다.');
-        }
-
-        // 이미지 수가 정상적으로 변환된 경우 DB 업데이트
-        $updateFileQuery = "UPDATE file_info SET image_processed_count = ? WHERE file_id = ?";
-        $updateFileStmt = $conn->prepare($updateFileQuery);
-        $updateFileStmt->bind_param("ii", $processedCount, $fileId);
-        $updateFileStmt->execute();
-        $updateFileStmt->close();
 
         sendJsonResponse(200, '파일이 성공적으로 업로드되었습니다.');
     } catch (Exception $e) {
