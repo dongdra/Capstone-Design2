@@ -7,10 +7,14 @@
 require_once '../db/db_config.php';
 
 // JSON 응답을 반환하는 함수
-function sendJsonResponse($statusCode, $message)
+function sendJsonResponse($statusCode, $message, $data = null)
 {
     header('Content-Type: application/json');
-    echo json_encode(['StatusCode' => $statusCode, 'message' => $message]);
+    $response = ['StatusCode' => $statusCode, 'message' => $message];
+    if ($data) {
+        $response['data'] = $data; // 추가 데이터가 있는 경우 응답에 포함
+    }
+    echo json_encode($response);
     exit;
 }
 
@@ -37,7 +41,7 @@ try {
     $conn = getDbConnection();
 
     // SQL 쿼리 작성 - 아이디 또는 이메일로 사용자 검색
-    $sql = "SELECT user_id, username, password, email, is_active FROM members 
+    $sql = "SELECT name, password, email, is_active FROM members 
             WHERE (username = ? OR email = ?) AND is_active = 1 LIMIT 1";
     $stmt = $conn->prepare($sql);
 
@@ -63,8 +67,12 @@ try {
         sendJsonResponse(401, '아이디/이메일 또는 비밀번호가 잘못되었습니다.');
     }
 
-    // 로그인 성공 응답
-    sendJsonResponse(200, 'Login successful');
+    // 로그인 성공 응답에 사용자 정보 포함
+    $userData = [
+        'name' => $user['name'], // name 반환
+        'email' => $user['email'] // email 반환
+    ];
+    sendJsonResponse(200, 'Login successful', $userData);
 
     // statement와 연결 종료
     $stmt->close();
