@@ -1,16 +1,15 @@
-// App.js
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useRef } from 'react';
 import { View, StyleSheet, Text, ActivityIndicator, TouchableOpacity, Alert, Platform } from 'react-native';
 import { Provider } from 'react-native-paper';
-import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
+import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { Ionicons } from '@expo/vector-icons';
-import * as SecureStore from 'expo-secure-store';
 import HomePage from './page/HomePage';
 import LoginPage from './page/LoginPage';
 import DocumentViewer from './page/tabs/home/detail/viewer/DocumentViewer';
 import { DataProvider, DataContext } from './DataContext';
 import * as SplashScreen from 'expo-splash-screen';
+import { StatusBar } from 'react-native';
 import * as ScreenCapture from 'expo-screen-capture';
 
 const Stack = createStackNavigator();
@@ -24,91 +23,101 @@ const styles = StyleSheet.create({
 });
 
 function App() {
+  const { 
+    identifier, 
+    password, 
+    isAutoLoginEnabled, 
+    saveCredentials, 
+    clearCredentials, 
+    isDarkThemeEnabled 
+  } = useContext(DataContext);
+  
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [storedCredentials, setStoredCredentials] = useState(null);
-  const [isAutoLoginEnabled, setIsAutoLoginEnabled] = useState(false);
-  
-  // 스크린 캡처 방지 설정 변수
-  const isScreenCapturePrevented = true; // 필요에 따라 true 또는 false로 설정
-  
-  const { isDarkThemeEnabled } = useContext(DataContext);
+  const screenshotListener = useRef(null);
 
-  // 앱 준비 및 자격 증명 로드
+  // 스크린 캡처 방지 설정 변수
+  const isScreenCapturePrevented = true;
+
   useEffect(() => {
+    let isMounted = true;
+
+    const setupScreenCapture = async () => {
+      if (isScreenCapturePrevented) {
+        if (Platform.OS === 'android') {
+          try {
+            await ScreenCapture.preventScreenCaptureAsync();
+          } catch (error) {
+            console.error('Android screen capture prevention error:', error);
+          }
+        } else if (Platform.OS === 'ios') {
+          try {
+            // iOS에서는 리스너만 추가
+            screenshotListener.current = ScreenCapture.addScreenshotListener(() => {
+              if (isMounted) {
+                handleLogout();
+                Alert.alert(
+                  '경고',
+                  '스크린샷이 감지되어 로그아웃됩니다.',
+                  [{ text: '확인' }]
+                );
+              }
+            });
+          } catch (error) {
+            console.error('iOS screenshot listener error:', error);
+          }
+        }
+      }
+    };
+
     const prepareApp = async () => {
       try {
         await SplashScreen.preventAutoHideAsync();
 
-        const storedIdentifier = await SecureStore.getItemAsync('identifier');
-        const storedPassword = await SecureStore.getItemAsync('password');
-        const autoLoginStatus = await SecureStore.getItemAsync('isAutoLoginEnabled');
+        // 스크린 캡처 설정
+        await setupScreenCapture();
 
+        // 자동 로그인 처리
         if (
-          autoLoginStatus === 'true' &&
-          storedIdentifier &&
-          storedPassword &&
-          storedIdentifier !== "null" &&
-          storedPassword !== "null"
+          isAutoLoginEnabled &&
+          identifier &&
+          password &&
+          identifier !== "null" &&
+          password !== "null"
         ) {
-          setStoredCredentials({ identifier: storedIdentifier, password: storedPassword });
-          setIsAutoLoginEnabled(true);
-        }
-
-        // 스크린 캡처 방지 설정 및 해제
-        if (isScreenCapturePrevented) {
-          // 스크린 캡처 방지 활성화
-          if (Platform.OS === 'android') {
-            await ScreenCapture.preventScreenCaptureAsync();
-          } else {
-            ScreenCapture.addScreenshotListener(() => {
-              handleLogout(); // iOS의 경우 스크린샷 찍히면 로그아웃
-              Alert.alert(
-                '경고',
-                '스크린샷이 감지되어 로그아웃됩니다.',
-                [{ text: '확인' }]
-              );
-            });
-          }
-        } else {
-          // 스크린 캡처 방지 비활성화
-          await ScreenCapture.allowScreenCaptureAsync();
-          if (Platform.OS === 'ios') {
-            ScreenCapture.removeScreenshotListener();
-          }
+          await handleLogin(identifier, password, true);
         }
       } catch (error) {
-        console.error('자동 로그인 확인 중 오류 발생:', error);
+        console.error('앱 준비 중 오류 발생:', error);
       } finally {
-        setLoading(false);
-        await SplashScreen.hideAsync();
+        if (isMounted) {
+          setLoading(false);
+          await SplashScreen.hideAsync();
+        }
       }
     };
+
     prepareApp();
 
+    // Cleanup function
     return () => {
-      if (Platform.OS === 'ios' && isScreenCapturePrevented) {
-        ScreenCapture.removeScreenshotListener();
+      isMounted = false;
+      if (Platform.OS === 'ios' && screenshotListener.current) {
+        screenshotListener.current.remove();
+        screenshotListener.current = null;
       }
     };
-  }, []);
-
-  // 자동 로그인 조건을 충족할 경우 로그인 시도
-  useEffect(() => {
-    if (isAutoLoginEnabled && storedCredentials) {
-      handleLogin(storedCredentials.identifier, storedCredentials.password, true);
-    }
-  }, [isAutoLoginEnabled, storedCredentials]);
+  }, [isAutoLoginEnabled, identifier, password]);
 
   const handleLogin = async (identifier, password, isAutoLogin = false) => {
     try {
-      await SecureStore.setItemAsync('identifier', identifier);
-      await SecureStore.setItemAsync('password', password);
-
-      if (!isAutoLogin) {
-        await SecureStore.setItemAsync('isAutoLoginEnabled', 'true');
+      // 자격 증명 저장 전에 유효성 검사
+      if (!identifier || !password) {
+        throw new Error('Invalid credentials');
       }
-
+      
+      // 자격 증명 저장
+      await saveCredentials(identifier, password, isAutoLogin);
       setIsLoggedIn(true);
     } catch (error) {
       console.error('로그인 처리 중 오류 발생:', error);
@@ -118,11 +127,7 @@ function App() {
 
   const handleLogout = async () => {
     try {
-      await SecureStore.deleteItemAsync('identifier');
-      await SecureStore.deleteItemAsync('password');
-      await SecureStore.deleteItemAsync('isAutoLoginEnabled');
-      setStoredCredentials(null);
-      setIsAutoLoginEnabled(false);
+      await clearCredentials();
       setIsLoggedIn(false);
     } catch (error) {
       console.error('로그아웃 처리 중 오류 발생:', error);
@@ -140,49 +145,62 @@ function App() {
   }
 
   return (
-    <NavigationContainer theme={isDarkThemeEnabled ? DarkTheme : DefaultTheme}>
-      <Provider>
-        <Stack.Navigator>
-          {isLoggedIn ? (
+    <>
+      <StatusBar
+        barStyle={isDarkThemeEnabled ? 'light-content' : 'dark-content'}
+        backgroundColor={isDarkThemeEnabled ? '#333' : '#fff'}
+      />
+      <NavigationContainer>
+        <Provider>
+          <Stack.Navigator
+            screenOptions={{
+              headerStyle: {
+                backgroundColor: isDarkThemeEnabled ? '#333' : '#fff',
+              },
+              headerTintColor: isDarkThemeEnabled ? '#fff' : '#333',
+            }}
+          >
+            {isLoggedIn ? (
+              <Stack.Screen
+                name="HomePage"
+                options={({ navigation }) => ({
+                  title: '',
+                  headerLeft: () => (
+                    <TouchableOpacity
+                      style={styles.backButton}
+                      onPress={() => navigation.goBack()}
+                    >
+                      <Ionicons
+                        name="arrow-back"
+                        size={25}
+                        color={isDarkThemeEnabled ? "#fff" : "#333"}
+                        style={{ marginLeft: 10 }}
+                      />
+                    </TouchableOpacity>
+                  ),
+                })}
+              >
+                {() => <HomePage onLogout={handleLogout} />}
+              </Stack.Screen>
+            ) : (
+              <Stack.Screen name="LoginPage" options={{ headerShown: false }}>
+                {() => (
+                  <LoginPage
+                    onLogin={handleLogin}
+                    storedCredentials={{ identifier, password }}
+                  />
+                )}
+              </Stack.Screen>
+            )}
             <Stack.Screen
-              name="HomePage"
-              options={({ navigation }) => ({
-                title: '',
-                headerLeft: () => (
-                  <TouchableOpacity
-                    style={styles.backButton}
-                    onPress={() => navigation.goBack()}
-                  >
-                    <Ionicons
-                      name="arrow-back"
-                      size={25}
-                      color={isDarkThemeEnabled ? "#fff" : "#333"}
-                      style={{ marginLeft: 10 }}
-                    />
-                  </TouchableOpacity>
-                ),
-              })}
-            >
-              {() => <HomePage onLogout={handleLogout} />}
-            </Stack.Screen>
-          ) : (
-            <Stack.Screen name="LoginPage" options={{ headerShown: false }}>
-              {() => (
-                <LoginPage
-                  onLogin={handleLogin}
-                  storedCredentials={storedCredentials}
-                />
-              )}
-            </Stack.Screen>
-          )}
-          <Stack.Screen
-            name="DocumentViewer"
-            component={DocumentViewer}
-            options={{ title: '문서 페이지' }}
-          />
-        </Stack.Navigator>
-      </Provider>
-    </NavigationContainer>
+              name="DocumentViewer"
+              component={DocumentViewer}
+              options={{ title: '문서 페이지' }}
+            />
+          </Stack.Navigator>
+        </Provider>
+      </NavigationContainer>
+    </>
   );
 }
 

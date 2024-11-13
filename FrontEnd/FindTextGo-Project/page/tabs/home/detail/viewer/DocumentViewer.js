@@ -1,5 +1,5 @@
 // DocumentViewer.js
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useContext } from 'react';
 import { View, Text, ActivityIndicator, StyleSheet, TextInput, TouchableOpacity, Alert, Image, Platform } from 'react-native';
 import ImageViewer from 'react-native-image-zoom-viewer';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -8,6 +8,7 @@ import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 import { useFocusEffect } from '@react-navigation/native';
 import { addLog } from '../../../../../logService';
+import { DataContext } from '../../../../../DataContext';
 
 const styles = StyleSheet.create({
   searchSection: {
@@ -53,14 +54,9 @@ const styles = StyleSheet.create({
   }
 });
 
-async function getCredentials() {
-  const identifier = await SecureStore.getItemAsync('identifier');
-  const password = await SecureStore.getItemAsync('password');
-  return { identifier, password };
-}
-
 const DocumentViewer = ({ route }) => {
   const { documentId, documentPage, fileName } = route.params;
+  const { identifier, password } = useContext(DataContext);
   const [images, setImages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -105,16 +101,23 @@ const DocumentViewer = ({ route }) => {
   // OCR 검색 함수
   const searchOCR = async () => {
     try {
-      const { identifier, password } = await getCredentials();
-  
-      const response = await axios.post(`${API_BASE_URL}/search/api.php`, {
-        identifier,
-        password,
-        search_term: `'text:'${searchTerm}'`,
-        document_id: documentId,
-      }, {
-        headers: { 'Content-Type': 'application/json' },
-      });
+      if (!identifier || !password) {
+        Alert.alert('오류', '로그인 정보를 불러올 수 없습니다.');
+        return;
+      }
+
+      const response = await axios.post(
+        `${API_BASE_URL}/search/api.php`,
+        {
+          identifier,
+          password,
+          search_term: `'text:'${searchTerm}'`,
+          document_id: documentId,
+        },
+        {
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
   
       const data = response.data;
   

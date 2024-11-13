@@ -1,93 +1,20 @@
 // UploadModal.js
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback, useContext } from 'react';
 import { Modal, Button, Text, Portal } from 'react-native-paper';
 import { StyleSheet, View, TouchableOpacity, Alert } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import { MaterialIcons } from '@expo/vector-icons';
-import * as SecureStore from 'expo-secure-store';
 import { API_BASE_URL } from '@env'; 
 import axios from 'axios';
 import { useFocusEffect } from '@react-navigation/native';
 import { addLog } from '../../../../logService';
-
-const styles = StyleSheet.create({
-  modalContent: {
-    width: '100%',
-    padding: 20,
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    elevation: 10,
-    alignItems: 'center',
-  },
-  iconContainer: {
-    backgroundColor: '#eef2ff',
-    padding: 10,
-    borderRadius: 50,
-    marginBottom: 20,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 10,
-  },
-  description: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  fileDropArea: {
-    width: '100%',
-    height: 120,
-    borderWidth: 1,
-    borderColor: '#cfcfcf',
-    borderStyle: 'dashed',
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 20,
-    padding: 10,
-  },
-  fileInfoContainer: {
-    backgroundColor: '#f1f5f9',
-    padding: 10,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  fileInfo: {
-    fontSize: 16,
-    color: '#1f2937',
-    marginTop: 10,
-    fontWeight: '500',
-  },
-  link: {
-    color: '#3b82f6',
-    fontWeight: 'bold',
-  },
-  buttonContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '100%',
-    marginTop: 20,
-  },
-  cancelButton: {
-    borderColor: '#ccc',
-  },
-  uploadButton: {
-    backgroundColor: '#3b82f6',
-  },
-  errorMessage: {
-    color: 'red',
-    marginTop: 10,
-  },
-});
+import { DataContext } from '../../../../DataContext';
 
 const UploadModal = ({ visible, hideModal }) => {
+  const { identifier, password, isDarkThemeEnabled } = useContext(DataContext); 
   const [errorMessage, setErrorMessage] = useState('');
   const [selectedFile, setSelectedFile] = useState(null);
-  const [credentials, setCredentials] = useState({ identifier: '', password: '' });
-  
+
 
   useFocusEffect(
     useCallback(() => {
@@ -111,19 +38,6 @@ const UploadModal = ({ visible, hideModal }) => {
     'application/haansofthwp',
   ];
 
-  // 자격증명 불러오기
-  useEffect(() => {
-    const fetchCredentials = async () => {
-      const identifier = await SecureStore.getItemAsync('identifier');
-      const password = await SecureStore.getItemAsync('password');
-      setCredentials({ identifier, password });
-    };
-    fetchCredentials();
-
-    
-  }, []);
-
-  
 
   // 파일 선택 핸들러
   const pickDocument = async () => {
@@ -180,14 +94,14 @@ const convertToBase64 = async (uri) => {
 
   // 파일 업로드 핸들러
   const handleFileUpload = async () => {
-    if (!credentials.identifier || !credentials.password) {
+    if (!identifier || !password) { // identifier와 password 직접 사용
       setErrorMessage('로그인 정보를 불러올 수 없습니다.');
       return;
     }
   
     const uploadData = {
-      identifier: credentials.identifier,
-      password: credentials.password,
+      identifier,
+      password,
       file_base64: selectedFile.fileBase64,
       filename: selectedFile.name || 'noname.pdf',
     };
@@ -226,41 +140,68 @@ const convertToBase64 = async (uri) => {
 
   return (
     <Portal>
-      <Modal visible={visible} onDismiss={handleClose} contentContainerStyle={styles.modalContent}>
-        <View style={styles.iconContainer}>
-          <MaterialIcons name="folder" size={40} color="#3b82f6" />
+      <Modal visible={visible} onDismiss={handleClose} contentContainerStyle={[
+        styles.modalContent,
+        { backgroundColor: isDarkThemeEnabled ? '#333' : '#fff' }
+      ]}>
+        <View style={[
+          styles.iconContainer,
+          { backgroundColor: isDarkThemeEnabled ? '#444' : '#eef2ff' }
+        ]}>
+          <MaterialIcons name="folder" size={40} color={isDarkThemeEnabled ? '#fff' : '#3b82f6'} />
         </View>
-        <Text style={styles.title}>문서 업로드</Text>
-        <Text style={styles.description}>
+        <Text style={[
+          styles.title,
+          { color: isDarkThemeEnabled ? '#fff' : '#333' }
+        ]}>문서 업로드</Text>
+        <Text style={[
+          styles.description,
+          { color: isDarkThemeEnabled ? '#ccc' : '#666' }
+        ]}>
           PDF, Word, 한글(HWP), PPTX, 엑셀 파일을 업로드해주세요.
         </Text>
 
-        <TouchableOpacity style={styles.fileDropArea} onPress={pickDocument}>
-          <MaterialIcons name="cloud-upload" size={40} color="#3b82f6" />
-          <Text style={{ marginTop: 10 }}>여기에 파일을 드래그하거나 클릭하여 파일을 선택하세요</Text>
+        <TouchableOpacity style={[
+          styles.fileDropArea,
+          { borderColor: isDarkThemeEnabled ? '#555' : '#cfcfcf' }
+        ]} onPress={pickDocument}>
+          <MaterialIcons name="cloud-upload" size={40} color={isDarkThemeEnabled ? '#bbb' : '#3b82f6'} />
+          <Text style={{ marginTop: 10, color: isDarkThemeEnabled ? '#bbb' : '#000' }}>
+            여기에 파일을 드래그하거나 클릭하여 파일을 선택하세요
+          </Text>
         </TouchableOpacity>
 
-        {/* 파일이 선택되면 파일 이름 및 형식 표시 */}
         {selectedFile && (
-          <View style={styles.fileInfoContainer}>
-            <Text style={styles.fileInfo}>
+          <View style={[
+            styles.fileInfoContainer,
+            { backgroundColor: isDarkThemeEnabled ? '#555' : '#f1f5f9' }
+          ]}>
+            <Text style={[
+              styles.fileInfo,
+              { color: isDarkThemeEnabled ? '#eee' : '#1f2937' }
+            ]}>
               선택된 파일: {selectedFile.name}
             </Text>
           </View>
         )}
 
-        {/* 에러 메시지 */}
         {errorMessage && <Text style={styles.errorMessage}>{errorMessage}</Text>}
 
         <View style={styles.buttonContainer}>
-          <Button mode="outlined" onPress={handleClose} style={styles.cancelButton}>
+          <Button mode="outlined" onPress={handleClose} style={[
+            styles.cancelButton,
+            { borderColor: isDarkThemeEnabled ? '#777' : '#ccc', color: isDarkThemeEnabled ? '#bbb' : '#000' }
+          ]}>
             취소
           </Button>
           <Button
             mode="contained"
-            onPress={handleFileUpload} // 파일 업로드 처리
-            style={styles.uploadButton}
-            disabled={!selectedFile} // 파일이 없을 경우 버튼 비활성화
+            onPress={handleFileUpload}
+            style={[
+              styles.uploadButton,
+              { backgroundColor: isDarkThemeEnabled ? '#666' : '#3b82f6' }
+            ]}
+            disabled={!selectedFile}
           >
             파일 업로드
           </Button>
@@ -268,8 +209,69 @@ const convertToBase64 = async (uri) => {
       </Modal>
     </Portal>
   );
-  
 };
+
+const styles = StyleSheet.create({
+  modalContent: {
+    width: '100%',
+    padding: 20,
+    borderRadius: 10,
+    elevation: 10,
+    alignItems: 'center',
+  },
+  iconContainer: {
+    padding: 10,
+    borderRadius: 50,
+    marginBottom: 20,
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: '600',
+    marginBottom: 10,
+  },
+  description: {
+    fontSize: 14,
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  fileDropArea: {
+    width: '100%',
+    height: 120,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+    padding: 10,
+  },
+  fileInfoContainer: {
+    padding: 10,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  fileInfo: {
+    fontSize: 16,
+    marginTop: 10,
+    fontWeight: '500',
+  },
+  errorMessage: {
+    color: 'red',
+    marginTop: 10,
+  },
+  buttonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    marginTop: 20,
+  },
+  cancelButton: {
+    borderColor: '#ccc',
+  },
+  uploadButton: {
+    backgroundColor: '#3b82f6',
+  },
+});
 
 export default UploadModal;
 

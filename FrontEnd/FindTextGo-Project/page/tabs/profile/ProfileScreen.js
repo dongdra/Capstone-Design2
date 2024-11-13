@@ -2,6 +2,8 @@ import React, { useState, useCallback, useContext } from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity, Alert, TextInput } from 'react-native';
 import { AntDesign } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
+import { API_BASE_URL } from '@env'; 
+import axios from 'axios'; 
 import { addLog } from '../../../logService';
 import { DataContext } from '../../../DataContext';
 
@@ -87,16 +89,16 @@ const styles = StyleSheet.create({
 });
 
 const ProfileScreen = () => {
-  const { isDarkThemeEnabled } = useContext(DataContext);
+  const { identifier, password, name, email, saveCredentials, saveUserInfo, isDarkThemeEnabled } = useContext(DataContext); // DataContext에서 saveUserInfo 불러오기
   const [isEditing, setIsEditing] = useState(false);
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false); 
   const [profile, setProfile] = useState({
-    username: 'username',
-    password: 'password',
-    email: 'user@example.com',
-    name: 'name',
+    username: identifier || 'username',
+    password: password || 'password',
+    email: email || 'user@example.com',
+    name: name || 'name',
   });
-  // 원본 프로필 데이터를 저장할 상태 추가
-  const [originalProfile, setOriginalProfile] = useState({...profile});
+  const [originalProfile, setOriginalProfile] = useState({ ...profile });
 
   useFocusEffect(
     useCallback(() => {
@@ -109,21 +111,47 @@ const ProfileScreen = () => {
 
   const handleEdit = () => {
     if (isEditing) {
-      // 편집 모드를 끄고 원래 데이터로 복원
-      setProfile({...originalProfile});
+      setProfile({ ...originalProfile });
       setIsEditing(false);
     } else {
-      // 편집 모드를 켜고 현재 데이터를 원본으로 저장
-      setOriginalProfile({...profile});
+      setOriginalProfile({ ...profile });
       setIsEditing(true);
     }
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    if (!profile.username || !profile.password) {
+      Alert.alert('오류', '사용자명과 비밀번호를 입력하세요.');
+      return;
+    }
+
+    const modificationData = {
+      username: profile.username,
+      new_password: profile.password,
+      new_email: profile.email,
+      new_name: profile.name,
+    };
+  
+    try {
+      const response = await axios.post(`${API_BASE_URL}/user/modification.php`, modificationData, {
+        headers: { 'Content-Type': 'application/json' },
+      });
+  
+      const data = response.data;
+      if (data.StatusCode === 200) { // StatusCode가 200일 때 성공 처리
+        saveCredentials(profile.username, profile.password);
+        saveUserInfo(profile.name, profile.email); // name과 email도 저장
+        Alert.alert('회원정보 수정', '회원정보가 수정되었습니다.');
+      } else {
+        Alert.alert('회원정보 수정 실패', data.message || '다시 시도해 주세요.');
+      }
+    } catch (error) {
+      console.error('회원정보 수정 중 오류:', error);
+      Alert.alert('오류', '회원정보 수정 중 문제가 발생했습니다.');
+    }
+  
     setIsEditing(false);
-    // 저장 시 현재 데이터를 원본 데이터로 설정
-    setOriginalProfile({...profile});
-    Alert.alert('회원정보 수정', '회원정보가 수정되었습니다.');
+    setOriginalProfile({ ...profile });
   };
 
   const handleDeleteAccount = () => {
@@ -150,10 +178,10 @@ const ProfileScreen = () => {
           source={{ uri: 'https://via.placeholder.com/100' }}
         />
         <TouchableOpacity style={styles.editIcon} onPress={handleEdit}>
-          <AntDesign 
-            name={isEditing ? "close" : "edit"} 
-            size={20} 
-            color={isDarkThemeEnabled ? '#fff' : '#000'} 
+          <AntDesign
+            name={isEditing ? 'close' : 'edit'}
+            size={20}
+            color={isDarkThemeEnabled ? '#fff' : '#000'}
           />
         </TouchableOpacity>
       </View>
@@ -183,15 +211,22 @@ const ProfileScreen = () => {
               />
             </View>
             {isEditing ? (
-              <TextInput
-                style={[styles.input, { color: isDarkThemeEnabled ? '#bbb' : '#000' }]}
-                value={profile[field]}
-                onChangeText={(value) => handleChange(field, value)}
-                secureTextEntry={field === 'password'}
-              />
+              <>
+                <TextInput
+                  style={[styles.input, { color: isDarkThemeEnabled ? '#bbb' : '#000' }]}
+                  value={profile[field]}
+                  onChangeText={(value) => handleChange(field, value)}
+                  secureTextEntry={field === 'password' && !isPasswordVisible} // 비밀번호 가시성 적용
+                />
+                {field === 'password' && (
+                  <TouchableOpacity onPress={() => setIsPasswordVisible(!isPasswordVisible)}>
+                    <AntDesign name={isPasswordVisible ? 'eye' : 'eyeo'} size={20} color={isDarkThemeEnabled ? '#fff' : '#000'} />
+                  </TouchableOpacity>
+                )}
+              </>
             ) : (
               <Text style={[styles.sectionTitle, { color: isDarkThemeEnabled ? '#bbb' : '#000' }]}>
-                {profile[field]}
+                {field === 'password' ? '********' : profile[field]} {/* 비밀번호 비가시 상태로 표시 */}
               </Text>
             )}
           </View>
@@ -203,7 +238,7 @@ const ProfileScreen = () => {
           <Text style={styles.saveButtonText}>저장</Text>
         </TouchableOpacity>
       )}
-      
+
       <TouchableOpacity style={styles.deleteButton} onPress={handleDeleteAccount}>
         <Text style={styles.deleteButtonText}>회원 탈퇴</Text>
       </TouchableOpacity>

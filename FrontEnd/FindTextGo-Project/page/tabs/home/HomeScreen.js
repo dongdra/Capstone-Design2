@@ -1,5 +1,5 @@
 //HomeScreen.js
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useContext } from 'react';
 import {
   View,
   StyleSheet,
@@ -14,63 +14,13 @@ import { AntDesign, MaterialIcons } from '@expo/vector-icons';
 import UploadModal from './upload/UploadModal';
 import FilterDialog from './filter/FilterDialog';
 import DocumentList from './detail/DocumentList';
-import * as SecureStore from 'expo-secure-store';
 import { API_BASE_URL } from '@env';
 import { useFocusEffect } from '@react-navigation/native';
 import { addLog } from '../../../logService';
 import axios from 'axios';
+import { DataContext } from '../../../DataContext';
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 10,
-    backgroundColor: '#ffffff',
-  },
-  searchBarContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 20,
-    backgroundColor: '#fff',
-    elevation: 5,
-    paddingHorizontal: 10,
-    borderColor: '#6E6E6E',  // 빨간색 테두리 색상 설정
-    borderWidth: 1,      // 테두리 두께 설정
-    borderRadius: 4,     // 테두리 모서리 둥글게
-  },
-  SearchIcon: {
-    marginLeft: 8,
-    marginRight: 8,
-  },
-  HomeTextInput: {
-    flex: 1,
-    height: 55,
-    backgroundColor: 'transparent',
-    paddingLeft: 8,
-  },
-  FilterForm: {
-    backgroundColor: '#FAFAFA',
-    height: 40,
-    borderColor: '#BDBDBD',
-    borderWidth: 1,
-    borderRadius: 25,
-    marginRight: 8,
-  },
-  FilterText: {
-    color: '#6E6E6E',
-    fontSize: 13,
-  },
-  loaderContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-});
 
-async function getCredentials() {
-  const identifier = await SecureStore.getItemAsync('identifier');
-  const password = await SecureStore.getItemAsync('password');
-  return { identifier, password };
-}
 
 const formatFileSize = (bytes) => {
   if (bytes === 0) return '0 Bytes';
@@ -81,11 +31,12 @@ const formatFileSize = (bytes) => {
 
 const parseSearchTerm = (searchTerm) => searchTerm.trim();
 
-async function fetchDocuments(searchTerm) {
-  const { identifier, password } = await getCredentials();
+async function fetchDocuments(identifier, password, searchTerm) { 
   const formattedSearchTerm = parseSearchTerm(searchTerm);
 
   const searchData = { identifier, password, search_term: formattedSearchTerm };
+
+  console.log('전송하는 JSON 데이터:', JSON.stringify(searchData));
 
   try {
     const response = await axios.post(`${API_BASE_URL}/search/api.php`, searchData, {
@@ -104,6 +55,7 @@ async function fetchDocuments(searchTerm) {
 }
 
 const HomeScreen = () => {
+  const { identifier, password, isDarkThemeEnabled } = useContext(DataContext); 
   const [documents, setDocuments] = useState([]);
   const [open, setOpen] = useState(false);
   const [visibleModal, setVisibleModal] = useState(null);
@@ -151,8 +103,8 @@ const HomeScreen = () => {
   const handleSearch = useCallback(async () => {
     setIsSearching(true);
     setSearchError(null);
-    const result = await fetchDocuments(searchTerm);
-  
+    const result = await fetchDocuments(identifier, password, searchTerm); 
+    
     if (result.status === 404) {
       setSearchError('검색 결과가 없습니다.');
       setDocuments([]);
@@ -162,7 +114,7 @@ const HomeScreen = () => {
       setSearchError('오류가 발생했습니다. 나중에 다시 시도해주세요.');
     }
     setIsSearching(false);
-  }, [searchTerm]);
+  }, [identifier, password, searchTerm]);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -189,77 +141,132 @@ const HomeScreen = () => {
 
   return (
     <Provider>
-      <View style={styles.container}>
-        <View style={styles.searchBarContainer}>
+      <View style={[
+        styles.container,
+        { backgroundColor: isDarkThemeEnabled ? '#333' : '#fff' }
+      ]}>
+        <View style={[
+          styles.searchBarContainer,
+          { backgroundColor: isDarkThemeEnabled ? '#444' : '#fff', borderColor: isDarkThemeEnabled ? '#555' : '#6E6E6E' }
+        ]}>
           <TouchableRipple onPress={isSearching ? null : handleSearch} rippleColor="rgba(0, 0, 0, .32)" borderless>
-            <AntDesign name="search1" size={20} color={isSearching ? 'lightgray' : 'gray'} style={styles.SearchIcon} />
+            <AntDesign name="search1" size={20} color={isDarkThemeEnabled ? 'lightgray' : 'gray'} style={styles.SearchIcon} />
           </TouchableRipple>
           <TextInput
-            style={styles.HomeTextInput}
+            style={[styles.HomeTextInput, { color: isDarkThemeEnabled ? '#ddd' : '#000' }]}
             placeholder="검색어를 입력하세요"
             value={searchTerm}
             onChangeText={setSearchTerm}
             underlineColorAndroid="transparent"
-            placeholderTextColor="#999"
+            placeholderTextColor={isDarkThemeEnabled ? '#aaa' : '#999'}
           />
           {searchTerm.length > 0 && (
             <TouchableRipple onPress={clearSearch}>
-              <MaterialIcons name="close" size={26} color="gray" style={{ marginRight: 10 }} />
+              <MaterialIcons name="close" size={26} color={isDarkThemeEnabled ? '#ddd' : 'gray'} style={{ marginRight: 10 }} />
             </TouchableRipple>
           )}
           <TouchableRipple onPress={() => setShowFilterDialog(true)}>
-            <MaterialIcons name="filter-list" size={26} color="gray" />
+            <MaterialIcons name="filter-list" size={26} color={isDarkThemeEnabled ? '#ddd' : 'gray'} />
           </TouchableRipple>
         </View>
 
         <FilterDialog visible={showFilterDialog} onDismiss={() => setShowFilterDialog(false)} onApply={applyFiltersToSearch} />
 
         {isSearching ? (
-          <View style={styles.loaderContainer}>
-            <ActivityIndicator size="large" color="#6200ee" />
-            <Text>로딩 중...</Text>
-          </View>
-        ) : (
-          <>
-            {searchError && (
-              <View style={{ padding: 10, alignItems: 'center' }}>
-                <Text style={{ color: 'red' }}>{searchError}</Text>
-              </View>
-            )}
-            <FlatList
-              data={documents}
-              renderItem={({ item }) => <DocumentList documents={[item]} />}
-              keyExtractor={(item) => item.id.toString()}
-              refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />}
-            />
-          </>
-        )}
+  <View style={styles.loaderContainer}>
+    <ActivityIndicator size="large" color="#6200ee" />
+    <Text style={{ color: isDarkThemeEnabled ? '#fff' : '#000' }}>로딩 중...</Text>
+  </View>
+) : (
+  <>
+    {searchError && (
+      <View style={styles.emptyContainer}>
+        <Text style={[styles.emptyText, { color: isDarkThemeEnabled ? '#bbb' : '#666' }]}>
+          {searchError}
+        </Text>
+      </View>
+    )}
+    <FlatList
+      data={documents}
+      renderItem={({ item }) => <DocumentList documents={[item]} />}
+      keyExtractor={(item) => item.id.toString()}
+      refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />}
+    />
+  </>
+)}
 
         <UploadModal visible={visibleModal === 'upload'} hideModal={hideModal} />
 
         <FAB.Group
-
-          open={open}
-          icon={open ? 'close' : 'plus'}
-          actions={[
-            {
-              icon: 'upload',
-              label: '파일 업로드',
-              onPress: () => showModal('upload'),
-              color: '#1C1C1C',
-              backgroundColor: '#ffffff',
-            },
-          ]}
-          onStateChange={({ open }) => setOpen(open)}
-          fabStyle={{
-            backgroundColor: '#ffffff',
-            borderColor: '#1C1C1C',
-            borderWidth: 1,
+  open={open}
+  icon={open ? 'close' : 'plus'}
+  actions={[
+    {
+      icon: (props) => (
+        <View
+          style={{
+            backgroundColor: isDarkThemeEnabled ? '#444' : '#ffffff',
+            borderRadius: 25,
+            padding: 8,
           }}
-        />
+        >
+          <MaterialIcons name="upload" size={24} color={isDarkThemeEnabled ? '#ffffff' : '#444'} />
+        </View>
+      ),
+      label: '파일 업로드',
+      onPress: () => showModal('upload'),
+    },
+  ]}
+  onStateChange={({ open }) => setOpen(open)}
+  backdropColor={isDarkThemeEnabled ? '#444' : '#ffffff'}
+  fabStyle={{
+    backgroundColor: isDarkThemeEnabled ? '#444' : '#ffffff',
+    borderColor: '#1C1C1C',
+    borderWidth: 1,
+  }}
+/>
       </View>
     </Provider>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    padding: 10,
+  },
+  searchBarContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+    elevation: 5,
+    paddingHorizontal: 10,
+    borderWidth: 1,
+    borderRadius: 4,
+  },
+  SearchIcon: {
+    marginLeft: 8,
+    marginRight: 8,
+  },
+  HomeTextInput: {
+    flex: 1,
+    height: 55,
+    backgroundColor: 'transparent',
+    paddingLeft: 8,
+  },
+  loaderContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyText: {
+    fontSize: 16,
+  },
+});
 
 export default HomeScreen;

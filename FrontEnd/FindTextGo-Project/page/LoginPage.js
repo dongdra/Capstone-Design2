@@ -46,14 +46,13 @@ const styles = StyleSheet.create({
 	},
 });
 
-
 export default function LoginPage({ onLogin, storedCredentials }) {
 	const [isSignupVisible, setSignupVisible] = useState(false); 
 	const [identifier, setIdentifier] = useState(""); 
 	const [password, setPassword] = useState(""); 
 	const [showPassword, setShowPassword] = useState(false);
 	
-	const { saveCredentials } = useContext(DataContext); // DataContext에서 saveCredentials 불러오기
+	const { saveCredentials, saveUserInfo } = useContext(DataContext);
   
 	useEffect(() => {
 	  if (storedCredentials?.identifier && storedCredentials?.password) {
@@ -77,15 +76,15 @@ export default function LoginPage({ onLogin, storedCredentials }) {
 		const response = await axios.post(`${API_BASE_URL}/user/login.php`, loginData, {
 		  headers: { 'Content-Type': 'application/json' },
 		});
-  
 		if (response.data.StatusCode === 200) {
-		  Alert.alert("로그인 성공", "홈 화면으로 이동합니다.");
-		  await addLog(`로그인 성공을 하였습니다.`);
-  
-		  // 로그인 성공 시 DataContext에 자격 증명을 저장하고, onLogin 호출
-		  await saveCredentials(identifier, password);
-		  onLogin(identifier, password); 
-		} else {
+			const { name, email } = response.data.data;
+			Alert.alert("로그인 성공", "홈 화면으로 이동합니다.");
+			await addLog(`로그인 성공을 하였습니다.`);
+		  
+			await saveCredentials(identifier, password); 
+			await saveUserInfo(name, email); // name과 email은 별도로 저장
+			onLogin(identifier, password); 
+		  } else {
 		  Alert.alert("로그인 실패", "로그인에 실패했습니다. 다시 시도해 주세요.");
 		}
 	  } catch (error) {
