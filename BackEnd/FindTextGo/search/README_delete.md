@@ -13,8 +13,7 @@
 |---------------|-----------|---------|--------------------------------|
 | `identifier`  | `Y`       | `String`| 사용자 아이디 또는 이메일        |
 | `password`    | `Y`       | `String`| 사용자 비밀번호                 |
-| `file_id`     | `Y`       | `String`| 파일 고유번호                   |
-| `file_name`   | `Y`       | `String`| 파일 이름                      |
+| `upload`     | `Y`       | `Integer`| 업로드 고유번호                 |
 
 #### 응답
 
@@ -33,6 +32,7 @@ http://{address}:{port}/search/api.php
 {
     "identifier": "user@example.com",
     "password": "yourpassword"
+    "upload_id": 1
 }
 ```
 
@@ -40,45 +40,7 @@ http://{address}:{port}/search/api.php
 ```JSON
 {
   "StatusCode": 200,
-  "message": "검색 성공",
-  "data": [
-    {
-      "file_name": "1. 2023학년도 1학기 STEP 교과목 운영계획서 1부.pdf",
-      "file_extension": "pdf",
-      "pdf_page_count": 2,
-      "file_size": 57878,
-      "upload_date": "2024-10-02 15:06:35",
-      "first_page_image": "UklGRvC..."
-    }
-}
-```
-
-##### 해당 유저 소유의 문서 내에서 검색
-```url
-http://{address}:{port}/search/api.php
-```
-```json
-{
-    "identifier": "user@example.com",
-    "password": "yourpassword",
-    "search_term": "upload:20241002"
-}
-```
-
-##### 응답예시
-```JSON
-{
-  "StatusCode": 200,
-  "message": "검색 성공",
-  "data": [
-    {
-      "file_name": "1. 2023학년도 1학기 STEP 교과목 운영계획서 1부.pdf",
-      "file_extension": "pdf",
-      "pdf_page_count": 2,
-      "file_size": 57878,
-      "upload_date": "2024-10-02 15:06:35",
-      "first_page_image": "UklGRvC..."
-    }
+ "message": "파일이 성공적으로 삭제되었습니다."
 }
 ```
 
