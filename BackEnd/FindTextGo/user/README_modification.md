@@ -32,10 +32,10 @@ http://{address}:{port}/user/modification.php
 
 ```json
 {
-    "username": "genji",
+    "username": "username",
     "new_password": "asdf0424",
     "new_email": "example@example.com",
-    "new_name": "겐지"
+    "new_name": "user"
 }
 ```
 
