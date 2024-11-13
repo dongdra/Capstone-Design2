@@ -42,12 +42,11 @@ try {
     // 변수 초기화
     $identifier = trim($data['identifier'] ?? '');
     $password = trim($data['password'] ?? '');
-    $file_id = (int)($data['file_id'] ?? 0);
-    $file_name = trim($data['file_name'] ?? '');
+    $upload_id = (int)($data['upload_id'] ?? 0);
     
     // 필수 입력값 확인
-    if (!$identifier || !$password || !$file_id || !$file_name) {
-        sendJsonResponse(400, '모든 필드(identifier, password, file_id, file_name)를 입력해야 합니다.');
+    if (!$identifier || !$password || !$upload_id) {
+        sendJsonResponse(400, '모든 필드(identifier, password, upload_id)를 입력해야 합니다.');
     }
 
     // 데이터베이스 연결
@@ -78,12 +77,12 @@ try {
     $user_id = $user['user_id'];
 
     // file_uploads에서 파일 삭제 쿼리
-    $deleteSql = "DELETE FROM file_uploads WHERE user_id = ? AND file_id = ? AND file_name = ?";
+    $deleteSql = "DELETE FROM file_uploads WHERE user_id = ? AND upload_id = ?";
     $deleteStmt = $conn->prepare($deleteSql);
     if (!$deleteStmt) {
         throw new Exception('File statement 준비에 실패했습니다: ' . $conn->error);
     }
-    $deleteStmt->bind_param('iis', $user_id, $file_id, $file_name);
+    $deleteStmt->bind_param('ii', $user_id, $upload_id);
 
     if ($deleteStmt->execute()) {
         if ($deleteStmt->affected_rows > 0) {
