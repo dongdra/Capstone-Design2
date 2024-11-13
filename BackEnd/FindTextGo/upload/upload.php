@@ -152,29 +152,52 @@ function getPythonCommand()
 function processImages($pdfPath, $outputDir, $pageCount, $userName)
 {
     $pythonCommand = getPythonCommand();
-    $scriptPath = __DIR__ . '/save_pdf_as_png.py'; // Python 스크립트 경로
+    $scriptPath = str_replace('\\', '/', realpath(__DIR__ . '/save_pdf_as_png.py'));
+    $pdfPath = str_replace('\\', '/', realpath($pdfPath));
+    $outputDir = str_replace('\\', '/', realpath($outputDir));
 
-    // Python 스크립트를 실행하고 출력 결과를 확인
-    $command = escapeshellcmd("$pythonCommand $scriptPath " . escapeshellarg($pdfPath) . " " . escapeshellarg($outputDir) . " " . escapeshellarg($userName));
+    // 명령어 생성
+    $command = sprintf(
+        '%s %s %s %s %s',
+        escapeshellarg($pythonCommand),
+        escapeshellarg($scriptPath),
+        escapeshellarg($pdfPath),
+        escapeshellarg($outputDir),
+        escapeshellarg($userName)
+    );
+
     $output = [];
+    $returnVar = null;
+
+    // 명령 실행
     exec($command, $output, $returnVar);
 
-    // 디버깅: 명령어와 결과 출력
+    // 디버깅용 로그
     error_log("Command: $command");
     error_log("Output: " . implode("\n", $output));
     error_log("Return var: $returnVar");
 
+    // Python 실행 결과 확인
     if ($returnVar !== 0 || empty($output) || strpos($output[0], 'success') === false) {
+        sendJsonResponse(400, '이미지 변환 실패', [
+            'command' => $command,
+            'output' => $output,
+            'return_var' => $returnVar,
+            'error_message' => $output[0] ?? 'Python 실행 실패'
+        ]);
         return false;
     }
 
     // 변환된 이미지 수가 페이지 수와 일치하는지 확인
     $processedCount = count(glob("$outputDir/*.png"));
 
-    // 페이지 수와 이미지 수가 일치하지 않으면 모든 이미지를 삭제
     if ($processedCount !== $pageCount) {
         array_map('unlink', glob("$outputDir/*.png"));
-        return false; // 변환이 실패로 처리됨
+        sendJsonResponse(400, '이미지 변환 실패: 변환된 이미지 수가 페이지 수와 일치하지 않습니다.', [
+            'expected_pages' => $pageCount,
+            'processed_images' => $processedCount
+        ]);
+        return false;
     }
 
     return $processedCount;
@@ -265,10 +288,13 @@ function savePDFFile($conn, $user, $filepath, $filename, $fileExtension)
         $pageCount = getPDFPageCount($filepath);
         $userId = $user['user_id'];
 
-        // 파일 중복 체크
-        $fileExistsQuery = "SELECT file_id FROM file_info WHERE file_hash = ?";
+        // 파일 중복 체크 - 같은 사용자가 같은 파일을 업로드하는지만 체크
+        $fileExistsQuery = "SELECT fu.upload_id 
+                           FROM file_uploads fu 
+                           JOIN file_info fi ON fu.file_id = fi.file_id 
+                           WHERE fi.file_hash = ? AND fu.user_id = ?";
         $fileExistsStmt = $conn->prepare($fileExistsQuery);
-        $fileExistsStmt->bind_param("s", $fileHash);
+        $fileExistsStmt->bind_param("si", $fileHash, $userId);
         $fileExistsStmt->execute();
         $fileExistsResult = $fileExistsStmt->get_result();
 
@@ -276,46 +302,57 @@ function savePDFFile($conn, $user, $filepath, $filename, $fileExtension)
             throw new Exception('이미 업로드한 파일입니다.');
         }
 
-        // 파일 정보 저장
-        $insertFileQuery = "INSERT INTO file_info (file_hash, file_extension, file_size, pdf_page_count, image_processed_count) VALUES (?, ?, ?, ?, 0)";
-        $insertFileStmt = $conn->prepare($insertFileQuery);
-        $fileSize = filesize($filepath);
-        $insertFileStmt->bind_param("ssii", $fileHash, $fileExtension, $fileSize, $pageCount);
-        $insertFileStmt->execute();
+        // 기존 file_hash가 있는지 확인
+        $existingFileQuery = "SELECT file_id FROM file_info WHERE file_hash = ?";
+        $existingFileStmt = $conn->prepare($existingFileQuery);
+        $existingFileStmt->bind_param("s", $fileHash);
+        $existingFileStmt->execute();
+        $existingFileResult = $existingFileStmt->get_result();
 
-        $fileId = $insertFileStmt->insert_id;
+        // 기존 file_hash가 없는 경우에만 file_info에 새로운 레코드 생성
+        if ($existingFileResult->num_rows == 0) {
+            $insertFileQuery = "INSERT INTO file_info (file_hash, file_extension, file_size, pdf_page_count, image_processed_count) VALUES (?, ?, ?, ?, 0)";
+            $insertFileStmt = $conn->prepare($insertFileQuery);
+            $fileSize = filesize($filepath);
+            $insertFileStmt->bind_param("ssii", $fileHash, $fileExtension, $fileSize, $pageCount);
+            $insertFileStmt->execute();
+            $fileId = $insertFileStmt->insert_id;
 
+            // 새 파일인 경우에만 파일 저장 및 이미지 처리
+            $documentsDir = '../documents/' . $fileId;
+            if (!is_dir($documentsDir)) {
+                mkdir($documentsDir, 0777, true);
+            }
+
+            // 파일 이동
+            $filePath = $documentsDir . '/' . $fileId . '.pdf';
+            if (!rename($filepath, $filePath)) {
+                throw new Exception('파일 저장 중 오류가 발생했습니다.');
+            }
+
+            // 이미지 변환 실행 및 변환된 이미지 수 확인
+            $processedCount = processImages($filePath, $documentsDir, $pageCount, $user['username']);
+
+            if ($processedCount === false) {
+                throw new Exception('이미지 변환 처리 중 오류가 발생했습니다.');
+            }
+
+            // 이미지 수가 정상적으로 변환된 경우 DB 업데이트
+            $updateFileQuery = "UPDATE file_info SET image_processed_count = ? WHERE file_id = ?";
+            $updateFileStmt = $conn->prepare($updateFileQuery);
+            $updateFileStmt->bind_param("ii", $processedCount, $fileId);
+            $updateFileStmt->execute();
+        } else {
+            // 기존 파일이 있는 경우 file_id 가져오기
+            $fileId = $existingFileResult->fetch_assoc()['file_id'];
+        }
+
+        // file_uploads 테이블에 업로드 정보 저장
         $sanitizedFileName = sanitizeFileName($filename);
         $insertUploadQuery = "INSERT INTO file_uploads (file_id, user_id, file_name) VALUES (?, ?, ?)";
         $insertUploadStmt = $conn->prepare($insertUploadQuery);
         $insertUploadStmt->bind_param("iis", $fileId, $userId, $sanitizedFileName);
         $insertUploadStmt->execute();
-
-        // 파일 저장 경로 설정
-        $documentsDir = '../documents/' . $fileId;
-        if (!is_dir($documentsDir)) {
-            mkdir($documentsDir, 0777, true);
-        }
-
-        // 파일 이동
-        $filePath = $documentsDir . '/' . $fileId . '.pdf';
-        if (!rename($filepath, $filePath)) {
-            throw new Exception('파일 저장 중 오류가 발생했습니다.');
-        }
-
-        // 이미지 변환 실행 및 변환된 이미지 수 확인
-        $processedCount = processImages($filePath, $documentsDir, $pageCount, $user['username']);
-
-        if ($processedCount === false) {
-            throw new Exception('이미지 변환 처리 중 오류가 발생했습니다.');
-        }
-
-        // 이미지 수가 정상적으로 변환된 경우 DB 업데이트
-        $updateFileQuery = "UPDATE file_info SET image_processed_count = ? WHERE file_id = ?";
-        $updateFileStmt = $conn->prepare($updateFileQuery);
-        $updateFileStmt->bind_param("ii", $processedCount, $fileId);
-        $updateFileStmt->execute();
-        $updateFileStmt->close();
 
         sendJsonResponse(200, '파일이 성공적으로 업로드되었습니다.');
     } catch (Exception $e) {
