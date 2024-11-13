@@ -24,9 +24,8 @@
 |`message`|`String`|응답 메시지|
 
 #### 요청 예시
-##### 해당 유저 소유의 문서 정보 출력
 ```url
-http://{address}:{port}/search/api.php
+http://{address}:{port}/search/delete.php
 ```
 ```json
 {
