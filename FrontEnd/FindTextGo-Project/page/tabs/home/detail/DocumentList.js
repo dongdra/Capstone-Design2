@@ -9,6 +9,7 @@ import KeywordLocationModal from './keyword/KeywordLocationModal';
 import { API_BASE_URL } from '@env';
 import { addFavorite, removeFavorite, getFavorites } from '../../../../favoriteService';
 import { DataContext } from '../../../../DataContext';
+import axios from 'axios';
 
 const styles = {
   card: {
@@ -105,28 +106,18 @@ const DocumentList = ({ documents }) => {
       Alert.alert('오류', '로그인 정보를 불러올 수 없습니다.');
       return;
     }
-
+  
     setModalVisible(true);
     setIsLoading(true);
-
+  
     try {
-      const response = await fetch(`${API_BASE_URL}/summary/api.php`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          identifier,
-          password,
-          file_id: fileId,
-        }),
+      const response = await axios.post(`${API_BASE_URL}/summary/api.php`, {
+        identifier,
+        password,
+        file_id: fileId,
       });
-
-      if (!response.ok) {
-        throw new Error(`서버 오류: ${response.status}`);
-      }
-
-      const data = await response.json();
+  
+      const data = response.data;
       if (data.StatusCode === 200) {
         setSummary(data.data.summary);
       } else {
@@ -139,8 +130,8 @@ const DocumentList = ({ documents }) => {
       setIsLoading(false);
     }
   }, [identifier, password]);
-
-  const deleteDocument = useCallback((documentId) => {
+  
+  const deleteDocument = useCallback((uploadId) => {
     Alert.alert(
       '파일 삭제',
       '파일을 삭제하시겠습니까?',
@@ -156,20 +147,21 @@ const DocumentList = ({ documents }) => {
                 return;
               }
   
-              const response = await fetch(`${API_BASE_URL}/search/delete.php`, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                  identifier,
-                  password,
-                  upload_id: documentId, // documentId를 upload_id로 전송
-                }),
-              });
+              const deleteData = {
+                identifier,
+                password,
+                upload_id: uploadId,
+              };
   
-              if (response.ok) {
+              console.log("전송할 JSON 데이터:", JSON.stringify(deleteData));
+  
+              const response = await axios.post(`${API_BASE_URL}/search/delete.php`, deleteData);
+  
+              if (response.status === 200) {
                 Alert.alert('성공', '파일이 삭제되었습니다.');
+              } else if (response.status === 404) {
+                const errorMessage = response.data?.message || '해당 파일을 찾을 수 없습니다.';
+                Alert.alert('오류', errorMessage);
               } else {
                 throw new Error(`서버 오류: ${response.status}`);
               }
@@ -236,7 +228,7 @@ const DocumentList = ({ documents }) => {
             <TouchableOpacity onPress={() => fetchSummary(item.id)} style={{ marginRight: 20 }}>
               <Feather name="file-text" size={24} color={isDarkThemeEnabled ? '#ddd' : 'black'} />
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => deleteDocument(item.id)} style={{ marginRight: 20 }}>
+            <TouchableOpacity onPress={() => deleteDocument(item.uploadid)} style={{ marginRight: 20 }}>
               <Feather name="trash-2" size={24} color={isDarkThemeEnabled ? '#ddd' : 'black'} />
             </TouchableOpacity>
             <TouchableOpacity onPress={() => toggleFavorite(item.id, item.title, item.pages)}>

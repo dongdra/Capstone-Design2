@@ -1,14 +1,6 @@
 //HomeScreen.js
 import React, { useState, useEffect, useCallback, useContext } from 'react';
-import {
-  View,
-  StyleSheet,
-  TextInput,
-  FlatList,
-  RefreshControl,
-  ActivityIndicator,
-  Text,
-} from 'react-native';
+import { View, StyleSheet, TextInput, FlatList, RefreshControl, ActivityIndicator, Text} from 'react-native';
 import { FAB, Provider, TouchableRipple } from 'react-native-paper';
 import { AntDesign, MaterialIcons } from '@expo/vector-icons';
 import UploadModal from './upload/UploadModal';
@@ -83,6 +75,7 @@ const HomeScreen = () => {
 
   const formatDocuments = (fetchedDocuments) => {
     const formattedData = fetchedDocuments.map((doc) => ({
+      uploadid: doc.upload_id,
       id: doc.file_id,
       title: doc.file_name,
       extension: doc.file_extension,

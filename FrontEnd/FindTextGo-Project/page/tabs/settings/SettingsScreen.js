@@ -3,13 +3,11 @@ import React, { useEffect, useContext, useCallback } from 'react';
 import { View, StyleSheet, Alert, ScrollView } from 'react-native';
 import { Button, Divider, Switch, List } from 'react-native-paper';
 import { AntDesign } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
-import { DataContext } from '../../../DataContext';
 import { useFocusEffect } from '@react-navigation/native';
+import { DataContext } from '../../../DataContext';
 import { addLog } from '../../../logService';
 
 const SettingsScreen = ({ onLogout }) => {
-  const navigation = useNavigation();
   const { 
     isDarkThemeEnabled, 
     setIsDarkThemeEnabled, 
@@ -34,10 +32,11 @@ const SettingsScreen = ({ onLogout }) => {
 
   const handleLogout = () => {
     Alert.alert('로그아웃', '성공적으로 로그아웃되었습니다.', [
-      { text: '확인', onPress: async () => {
-          await onLogout();
-          navigation.replace('LoginPage');
-        }
+      {
+        text: '확인',
+        onPress: async () => {
+          await onLogout(); // 직접 Logout을 호출하여 상태 변경
+        },
       },
     ]);
   };
