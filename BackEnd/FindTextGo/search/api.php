@@ -158,7 +158,7 @@ try {
     }
 
     // 기본 파일 정보 쿼리
-    $fileSql = "SELECT DISTINCT fu.file_id, fu.file_name, fi.file_extension, fi.pdf_page_count, fi.file_size, fu.upload_date 
+    $fileSql = "SELECT DISTINCT fu.upload_id, fu.file_id, fu.file_name, fi.file_extension, fi.pdf_page_count, fi.file_size, fu.upload_date 
                 FROM file_uploads fu
                 JOIN file_info fi ON fu.file_id = fi.file_id";
 
@@ -229,6 +229,7 @@ try {
 
         // 문서 정보 추가
         $fileInfo = [
+			'upload_id' => $fileRow['upload_id'],
             'file_id' => $fileId,
             'file_name' => $fileRow['file_name'],
             'file_extension' => $fileRow['file_extension'],
