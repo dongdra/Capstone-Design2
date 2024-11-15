@@ -10,7 +10,7 @@
 ### 요청 바디
 |필드명|필수 여부|타입|설명|
 |--|--|--|--|
-| `identifier` | `Y` | `String` | `유저명 또는 이메일 주소` |
+| `username` | `Y` | `String` | `유저명` |
 | `new_password` | `Y` | `String` | `비밀번호` |
 | `new_email` | `Y` | `String` | `이메일 주소` |
 | `new_name` | `Y` | `String` | `이름` |
