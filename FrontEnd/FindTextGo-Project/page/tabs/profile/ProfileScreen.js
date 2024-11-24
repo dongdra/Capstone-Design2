@@ -2,8 +2,8 @@ import React, { useState, useCallback, useContext } from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity, Alert, TextInput } from 'react-native';
 import { AntDesign } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
-import { API_BASE_URL } from '@env'; 
-import axios from 'axios'; 
+import { API_BASE_URL } from '@env';
+import axios from 'axios';
 import { addLog } from '../../../logService';
 import { DataContext } from '../../../DataContext';
 
@@ -16,9 +16,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   profileImage: {
-    width: 160, 
-    height: 160, 
-    borderRadius: 100, 
+    width: 160,
+    height: 160,
+    borderRadius: 100,
     borderWidth: 3,
   },
   profileName: {
@@ -88,10 +88,10 @@ const styles = StyleSheet.create({
   }
 });
 
-const ProfileScreen = () => {
+const ProfileScreen = ({ onLogout }) => {
   const { identifier, password, name, email, saveCredentials, saveUserInfo, isDarkThemeEnabled } = useContext(DataContext); // DataContext에서 saveUserInfo 불러오기
   const [isEditing, setIsEditing] = useState(false);
-  const [isPasswordVisible, setIsPasswordVisible] = useState(false); 
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [profile, setProfile] = useState({
     username: identifier || 'username',
     password: password || 'password',
@@ -103,10 +103,14 @@ const ProfileScreen = () => {
   useFocusEffect(
     useCallback(() => {
       const logVisit = async () => {
-        await addLog('프로필 페이지에 접속했습니다.');
+        if (!identifier) {
+          console.error("Identifier is required to add a log.");
+          return;
+        }
+        await addLog(identifier, '프로필 페이지에 접속했습니다.');
       };
       logVisit();
-    }, [])
+    }, [identifier])
   );
 
   const handleEdit = () => {
@@ -131,12 +135,12 @@ const ProfileScreen = () => {
       new_email: profile.email,
       new_name: profile.name,
     };
-  
+
     try {
       const response = await axios.post(`${API_BASE_URL}/user/modification.php`, modificationData, {
         headers: { 'Content-Type': 'application/json' },
       });
-  
+
       const data = response.data;
       if (data.StatusCode === 200) { // StatusCode가 200일 때 성공 처리
         saveCredentials(profile.username, profile.password);
@@ -149,18 +153,42 @@ const ProfileScreen = () => {
       console.error('회원정보 수정 중 오류:', error);
       Alert.alert('오류', '회원정보 수정 중 문제가 발생했습니다.');
     }
-  
+
     setIsEditing(false);
     setOriginalProfile({ ...profile });
   };
 
-  const handleDeleteAccount = () => {
+  const handleDeleteAccount = async () => {
     Alert.alert(
       '회원 탈퇴',
       '정말 회원 탈퇴를 하시겠습니까?',
       [
         { text: '아니오', onPress: () => console.log('탈퇴 취소'), style: 'cancel' },
-        { text: '예', onPress: () => console.log('탈퇴 진행') },
+        {
+          text: '예',
+          onPress: async () => {
+            try {
+              const response = await axios.post(`${API_BASE_URL}/user/secession.php`, {
+                identifier,
+                password,
+              }, {
+                headers: { 'Content-Type': 'application/json' },
+              });
+
+              const data = response.data;
+
+              if (data.StatusCode === 200) {
+                Alert.alert('회원 탈퇴 완료', data.message || '회원 탈퇴가 성공적으로 처리되었습니다.');
+                await onLogout(); // 직접 Logout을 호출하여 상태 변경
+              } else {
+                Alert.alert('회원 탈퇴 실패', data.message || '다시 시도해 주세요.');
+              }
+            } catch (error) {
+              console.error('회원 탈퇴 중 오류:', error);
+              Alert.alert('오류', '회원 탈퇴 중 문제가 발생했습니다.');
+            }
+          },
+        },
       ],
       { cancelable: true }
     );
@@ -201,10 +229,10 @@ const ProfileScreen = () => {
                   field === 'username'
                     ? 'idcard'
                     : field === 'password'
-                    ? 'lock1'
-                    : field === 'email'
-                    ? 'mail'
-                    : 'user'
+                      ? 'lock1'
+                      : field === 'email'
+                        ? 'mail'
+                        : 'user'
                 }
                 size={20}
                 color={isDarkThemeEnabled ? '#fff' : '#000'}

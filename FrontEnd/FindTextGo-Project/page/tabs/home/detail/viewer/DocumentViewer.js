@@ -5,7 +5,6 @@ import ImageViewer from 'react-native-image-zoom-viewer';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { API_BASE_URL } from '@env';
 import axios from 'axios'; 
-import * as SecureStore from 'expo-secure-store';
 import { useFocusEffect } from '@react-navigation/native';
 import { addLog } from '../../../../../logService';
 import { DataContext } from '../../../../../DataContext';
@@ -14,8 +13,7 @@ const styles = StyleSheet.create({
   searchSection: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 9,
-    marginBottom: 9,
+    padding:10,
     paddingHorizontal: 10,
   },
   input: {
@@ -56,7 +54,7 @@ const styles = StyleSheet.create({
 
 const DocumentViewer = ({ route }) => {
   const { documentId, documentPage, fileName } = route.params;
-  const { identifier, password } = useContext(DataContext);
+  const { identifier, password, isDarkThemeEnabled  } = useContext(DataContext);
   const [images, setImages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -69,10 +67,14 @@ const DocumentViewer = ({ route }) => {
   useFocusEffect(
     useCallback(() => {
       const logVisit = async () => {
-        await addLog(`${fileName} 문서에 접속했습니다.`);
+        if (!identifier) {
+          console.error("Identifier is required to add a log.");
+          return;
+        }
+        await addLog(identifier, `${fileName} 문서에 접속했습니다.`);
       };
       logVisit();
-    }, [fileName])
+    }, [identifier,fileName])
   );
 
   // 이미지 불러오기 함수
@@ -237,10 +239,19 @@ const DocumentViewer = ({ route }) => {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <View style={styles.searchSection}>
+      <View
+        style={[
+          styles.searchSection,
+          isDarkThemeEnabled && { backgroundColor: '#333' },
+        ]}
+      >
         <TextInput
-          style={styles.input}
+          style={[
+            styles.input,
+            isDarkThemeEnabled && styles.darkInput,
+          ]}
           placeholder="검색어를 입력하세요"
+          placeholderTextColor={isDarkThemeEnabled ? '#aaa' : '#000'}
           value={searchTerm}
           onChangeText={setSearchTerm}
         />

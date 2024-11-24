@@ -8,15 +8,33 @@
           "photosPermission": "앱의 보안을 위해 미디어 라이브러리 접근 권한이 필요합니다.",
           "savePhotosPermission": "앱의 보안을 위해 미디어 라이브러리 접근 권한이 필요합니다."
         }
-      ]
+      ],
+      "expo-sqlite"
     ],
     "name": "FindTextGo-Project",
     "slug": "FindTextGo-Project",
     "version": "1.0.0",
     "splash": {
-      "image": "./assets/back.png", 
-      "resizeMode": "contain",        
-      "backgroundColor": "#ffffff"    
+      "image": "./assets/back.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "android": {
+      "useNextNotificationsApi": true, 
+      "permissions": [
+        "NOTIFICATIONS"
+      ],
+      "config": {
+        "googleServicesFile": "./google-services.json" 
+      }
+    },
+    "ios": {
+      "infoPlist": {
+        "UIBackgroundModes": ["remote-notification"],
+        "NSUserTrackingUsageDescription": "알림을 보내기 위해 사용자 데이터를 사용할 수 있습니다."
+      },
+      "supportsTablet": true,
+      "bundleIdentifier": "com.findtextgo.project"
     }
   }
 }

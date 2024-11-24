@@ -14,18 +14,7 @@ const UploadModal = ({ visible, hideModal }) => {
   const { identifier, password, isDarkThemeEnabled } = useContext(DataContext); 
   const [errorMessage, setErrorMessage] = useState('');
   const [selectedFile, setSelectedFile] = useState(null);
-
-
-  useFocusEffect(
-    useCallback(() => {
-      const logVisit = async () => {
-        await addLog('업로드 페이지에 접속했습니다.');
-      };
-      logVisit();
-    }, [])
-  );
   
-
   // 허용하는 파일 형식 (이미지 제외)
   const allowedFileTypes = [
     'application/pdf',

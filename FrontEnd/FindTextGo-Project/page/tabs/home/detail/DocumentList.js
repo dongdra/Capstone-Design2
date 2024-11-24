@@ -1,5 +1,5 @@
 // DocumentList.js
-import React, { useState, useCallback, useContext } from 'react';
+import React, { useState, useCallback, useContext, useEffect } from 'react';
 import { View, FlatList, Image, Text, TouchableOpacity, Alert } from 'react-native';
 import { Card, Divider } from 'react-native-paper';
 import { Feather } from '@expo/vector-icons';
@@ -84,39 +84,66 @@ const DocumentList = ({ documents }) => {
   const [keywordModalVisible, setKeywordModalVisible] = useState(false);
   const [selectedLocations, setSelectedLocations] = useState([]);
   const navigation = useNavigation();
-  const [starColor, setStarColor] = useState('black');
+  const [favoriteStatus, setFavoriteStatus] = useState({}); // 문서별 즐겨찾기 상태
+
+  useEffect(() => {
+    const loadFavorites = async () => {
+      if (!identifier) return;
+
+      try {
+        const favorites = await getFavorites(identifier);
+        const status = favorites.reduce((acc, doc) => {
+          acc[doc.id] = true; // 즐겨찾기에 포함된 문서의 상태를 true로 설정
+          return acc;
+        }, {});
+        setFavoriteStatus(status);
+      } catch (error) {
+        console.error("Error loading favorites:", error);
+      }
+    };
+
+    loadFavorites();
+  }, [identifier]);
 
   const toggleFavorite = useCallback(async (documentId, documentTitle, documentPage) => {
+    if (!identifier) {
+      console.error("Identifier is required to toggle favorite.");
+      return;
+    }
+
     try {
-      const favorites = await getFavorites();
-      if (favorites.some(doc => doc.id === documentId)) {
-        await removeFavorite(documentId);
-        setStarColor('black');
+      const favorites = await getFavorites(identifier);
+      const isFavorite = favorites.some((doc) => doc.id === documentId);
+
+      if (isFavorite) {
+        await removeFavorite(identifier, documentId);
+        setFavoriteStatus((prevStatus) => ({ ...prevStatus, [documentId]: false })); // 상태 업데이트
       } else {
-        await addFavorite(documentId, documentTitle, documentPage);
-        setStarColor('#FFD700');
+        await addFavorite(identifier, documentId, documentTitle, documentPage);
+        setFavoriteStatus((prevStatus) => ({ ...prevStatus, [documentId]: true })); // 상태 업데이트
       }
     } catch (error) {
       console.error("Error toggling favorite:", error);
     }
-  }, []);
+  }, [identifier]);
+
 
   const fetchSummary = useCallback(async (fileId) => {
     if (!identifier || !password) {
       Alert.alert('오류', '로그인 정보를 불러올 수 없습니다.');
       return;
     }
-  
+
     setModalVisible(true);
     setIsLoading(true);
-  
+
     try {
       const response = await axios.post(`${API_BASE_URL}/summary/api.php`, {
         identifier,
         password,
         file_id: fileId,
       });
-  
+
       const data = response.data;
       if (data.StatusCode === 200) {
         setSummary(data.data.summary);
@@ -130,7 +157,7 @@ const DocumentList = ({ documents }) => {
       setIsLoading(false);
     }
   }, [identifier, password]);
-  
+
   const deleteDocument = useCallback((uploadId) => {
     Alert.alert(
       '파일 삭제',
@@ -146,17 +173,17 @@ const DocumentList = ({ documents }) => {
                 Alert.alert('오류', '로그인 정보를 불러올 수 없습니다.');
                 return;
               }
-  
+
               const deleteData = {
                 identifier,
                 password,
                 upload_id: uploadId,
               };
-  
+
               console.log("전송할 JSON 데이터:", JSON.stringify(deleteData));
-  
+
               const response = await axios.post(`${API_BASE_URL}/search/delete.php`, deleteData);
-  
+
               if (response.status === 200) {
                 Alert.alert('성공', '파일이 삭제되었습니다.');
               } else if (response.status === 404) {
@@ -175,7 +202,7 @@ const DocumentList = ({ documents }) => {
       { cancelable: true }
     );
   }, [identifier, password]);
-  
+
 
   const renderItem = ({ item }) => (
     <TouchableOpacity
@@ -232,7 +259,7 @@ const DocumentList = ({ documents }) => {
               <Feather name="trash-2" size={24} color={isDarkThemeEnabled ? '#ddd' : 'black'} />
             </TouchableOpacity>
             <TouchableOpacity onPress={() => toggleFavorite(item.id, item.title, item.pages)}>
-              <Feather name="star" size={24} color={starColor} />
+              <Feather name="star" size={24} color={favoriteStatus[item.id] ? '#FFD700' : 'black'} />
             </TouchableOpacity>
           </View>
         </View>

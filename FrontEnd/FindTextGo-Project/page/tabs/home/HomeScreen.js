@@ -1,6 +1,6 @@
 //HomeScreen.js
 import React, { useState, useEffect, useCallback, useContext } from 'react';
-import { View, StyleSheet, TextInput, FlatList, RefreshControl, ActivityIndicator, Text} from 'react-native';
+import { View, StyleSheet, TextInput, FlatList, RefreshControl, ActivityIndicator, Text } from 'react-native';
 import { FAB, Provider, TouchableRipple } from 'react-native-paper';
 import { AntDesign, MaterialIcons } from '@expo/vector-icons';
 import UploadModal from './upload/UploadModal';
@@ -23,7 +23,7 @@ const formatFileSize = (bytes) => {
 
 const parseSearchTerm = (searchTerm) => searchTerm.trim();
 
-async function fetchDocuments(identifier, password, searchTerm) { 
+async function fetchDocuments(identifier, password, searchTerm) {
   const formattedSearchTerm = parseSearchTerm(searchTerm);
 
   const searchData = { identifier, password, search_term: formattedSearchTerm };
@@ -47,7 +47,7 @@ async function fetchDocuments(identifier, password, searchTerm) {
 }
 
 const HomeScreen = () => {
-  const { identifier, password, isDarkThemeEnabled } = useContext(DataContext); 
+  const { identifier, password, isDarkThemeEnabled } = useContext(DataContext);
   const [documents, setDocuments] = useState([]);
   const [open, setOpen] = useState(false);
   const [visibleModal, setVisibleModal] = useState(null);
@@ -67,8 +67,8 @@ const HomeScreen = () => {
     if (filters.singleDate) {
       appliedFilters += `${filters.singleDate.toLocaleDateString()} `;
     }
-    if (filters.fileType && filters.fileType.length > 0) {
-      appliedFilters += `${filters.fileType.join(',')} `;
+    if (filters.fileType) { // 단일 값으로 처리
+      appliedFilters += `${filters.fileType} `;
     }
     setSearchTerm(appliedFilters.trim());
   };
@@ -96,8 +96,8 @@ const HomeScreen = () => {
   const handleSearch = useCallback(async () => {
     setIsSearching(true);
     setSearchError(null);
-    const result = await fetchDocuments(identifier, password, searchTerm); 
-    
+    const result = await fetchDocuments(identifier, password, searchTerm);
+
     if (result.status === 404) {
       setSearchError('검색 결과가 없습니다.');
       setDocuments([]);
@@ -114,7 +114,7 @@ const HomeScreen = () => {
     await handleSearch();
     setIsRefreshing(false);
   };
-  
+
 
   useEffect(() => {
     handleSearch();
@@ -123,13 +123,25 @@ const HomeScreen = () => {
   useFocusEffect(
     useCallback(() => {
       const logVisit = async () => {
-        await addLog('홈 페이지에 접속했습니다.');
+        if (!identifier) {
+          console.error("Identifier is required to add a log.");
+          return;
+        }
+        await addLog(identifier, '홈 페이지에 접속했습니다.');
       };
       logVisit();
-    }, [])
+    }, [identifier])
   );
 
-  const showModal = (modalType) => setVisibleModal(modalType);
+  
+
+  const showModal = (modalType) => {
+    if (modalType === 'upload' && identifier) {
+      addLog(identifier, '업로드 페이지에 접속했습니다.'); // 업로드 모달 로그 추가
+    }
+    setVisibleModal(modalType);
+  };
+
   const hideModal = () => setVisibleModal(null);
 
   return (
@@ -166,57 +178,41 @@ const HomeScreen = () => {
         <FilterDialog visible={showFilterDialog} onDismiss={() => setShowFilterDialog(false)} onApply={applyFiltersToSearch} />
 
         {isSearching ? (
-  <View style={styles.loaderContainer}>
-    <ActivityIndicator size="large" color="#6200ee" />
-    <Text style={{ color: isDarkThemeEnabled ? '#fff' : '#000' }}>로딩 중...</Text>
-  </View>
-) : (
-  <>
-    {searchError && (
-      <View style={styles.emptyContainer}>
-        <Text style={[styles.emptyText, { color: isDarkThemeEnabled ? '#bbb' : '#666' }]}>
-          {searchError}
-        </Text>
-      </View>
-    )}
-    <FlatList
-      data={documents}
-      renderItem={({ item }) => <DocumentList documents={[item]} />}
-      keyExtractor={(item) => item.id.toString()}
-      refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />}
-    />
-  </>
-)}
+          <View style={styles.loaderContainer}>
+            <ActivityIndicator size="large" color="#6200ee" />
+            <Text style={{ color: isDarkThemeEnabled ? '#fff' : '#000' }}>로딩 중...</Text>
+          </View>
+        ) : (
+          <>
+            {searchError && (
+              <View style={styles.emptyContainer}>
+                <Text style={[styles.emptyText, { color: isDarkThemeEnabled ? '#bbb' : '#666' }]}>
+                  {searchError}
+                </Text>
+              </View>
+            )}
+            <FlatList
+              data={documents}
+              renderItem={({ item }) => <DocumentList documents={[item]} />}
+              keyExtractor={(item) => item.id.toString()}
+              refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />}
+            />
+          </>
+        )}
 
         <UploadModal visible={visibleModal === 'upload'} hideModal={hideModal} />
 
-        <FAB.Group
-  open={open}
-  icon={open ? 'close' : 'plus'}
-  actions={[
-    {
-      icon: (props) => (
-        <View
-          style={{
-            backgroundColor: isDarkThemeEnabled ? '#444' : '#ffffff',
-            borderRadius: 25,
-            padding: 8,
-          }}
-        >
-          <MaterialIcons name="upload" size={24} color={isDarkThemeEnabled ? '#ffffff' : '#444'} />
-        </View>
-      ),
-      label: '파일 업로드',
-      onPress: () => showModal('upload'),
-    },
-  ]}
-  onStateChange={({ open }) => setOpen(open)}
-  backdropColor={isDarkThemeEnabled ? '#444' : '#ffffff'}
-  fabStyle={{
-    backgroundColor: isDarkThemeEnabled ? '#444' : '#ffffff',
-    borderColor: '#1C1C1C',
+        <FAB
+  icon="upload"
+  onPress={() => showModal('upload')} // 누르면 바로 UploadModal 호출
+  style={{
+    backgroundColor: isDarkThemeEnabled ? '#333' : '#fff',
     borderWidth: 1,
+    position: 'absolute',
+    bottom: 16,
+    right: 16,
   }}
+  color={isDarkThemeEnabled ? '#fff' : '#333'} // 다크모드에 따라 아이콘 색상 설정
 />
       </View>
     </Provider>

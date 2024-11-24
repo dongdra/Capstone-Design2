@@ -1,28 +1,36 @@
-// ActivityLogScreen.js
+// LogRecordScreen.js
 import React, { useState, useCallback, useContext } from 'react';
-import { View, Text, StyleSheet, FlatList } from 'react-native';
-import { Button, Provider as PaperProvider } from 'react-native-paper';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
+import { Provider as PaperProvider } from 'react-native-paper';
 import { useFocusEffect } from '@react-navigation/native';
 import { addLog, getLogs, clearLogs } from '../../../logService';
 import { DataContext } from '../../../DataContext';
 
-const ActivityLogScreen = () => {
-  const { isDarkThemeEnabled } = useContext(DataContext); // 다크 모드 상태 가져오기
+const LogRecordScreen = () => {
+  const { isDarkThemeEnabled, identifier } = useContext(DataContext); // 다크 모드 상태 및 사용자 identifier 가져오기
   const [logs, setLogs] = useState([]);
 
   const loadLogs = useCallback(async () => {
-    const savedLogs = await getLogs();
+    if (!identifier) {
+      console.error("Identifier is required to load logs.");
+      return;
+    }
+    const savedLogs = await getLogs(identifier);
     setLogs(savedLogs);
-  }, []);
+  }, [identifier]);
 
   useFocusEffect(
     useCallback(() => {
       const logVisit = async () => {
-        await addLog('활동 로그 페이지에 접속했습니다.');
+        if (!identifier) {
+          console.error("Identifier is required to add a log.");
+          return;
+        }
+        await addLog(identifier, '활동 로그 페이지에 접속했습니다.');
         await loadLogs();
       };
       logVisit();
-    }, [loadLogs])
+    }, [loadLogs, identifier])
   );
 
   return (
@@ -48,21 +56,23 @@ const ActivityLogScreen = () => {
           />
         )}
         <View style={styles.buttonContainer}>
-          <Button
-            mode="contained"
+          <TouchableOpacity
             onPress={loadLogs}
             style={[
               styles.logrefreshbutton,
               { backgroundColor: isDarkThemeEnabled ? '#4a67c7' : '#536ed9' }
             ]}
           >
-            새로고침
-          </Button>
+            <Text style={{ color: "#fff", fontSize: 16, textAlign: "center" }}>새로고침</Text>
+          </TouchableOpacity>
   
-          <Button
-            mode="contained"
+          <TouchableOpacity
             onPress={async () => {
-              await clearLogs();
+              if (!identifier) {
+                console.error("Identifier is required to clear logs.");
+                return;
+              }
+              await clearLogs(identifier);
               loadLogs();
             }}
             style={[
@@ -70,12 +80,12 @@ const ActivityLogScreen = () => {
               { backgroundColor: isDarkThemeEnabled ? '#c75050' : '#d95e53' }
             ]}
           >
-            기록 삭제
-          </Button>
+            <Text style={{ color: "#fff", fontSize: 16, textAlign: "center" }}>기록 삭제</Text>
+          </TouchableOpacity>
         </View>
       </View>
     </PaperProvider>
-  );  
+  );
 };
 
 // 개별 로그를 카드 형태로 표시하는 컴포넌트
@@ -128,13 +138,13 @@ const styles = StyleSheet.create({
   },
   logrefreshbutton: {
     width: "35%",
-    paddingVertical: 10,
+    paddingVertical: 15,
     borderRadius: 10,
     marginLeft: 10,
   },
   logdeletebutton: {
     width: "35%",
-    paddingVertical: 10,
+    paddingVertical: 15,
     borderRadius: 10,
   },
   logemptyText: {
@@ -147,4 +157,4 @@ const styles = StyleSheet.create({
   }
 });
 
-export default ActivityLogScreen;
+export default LogRecordScreen;

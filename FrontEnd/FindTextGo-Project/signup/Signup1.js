@@ -1,8 +1,8 @@
-// Signup1.js
 import React, { useState } from 'react';
-import { View, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
-import { Button, TextInput, Title } from 'react-native-paper';
+import { View, ScrollView, StyleSheet, TouchableOpacity, Text } from 'react-native';
+import { Title } from 'react-native-paper';
 import Checkbox from 'expo-checkbox';
+import termsData from './terms.json'; // JSON 파일 import
 
 const styles = StyleSheet.create({
   signuppagetitle: {
@@ -12,22 +12,35 @@ const styles = StyleSheet.create({
     marginTop: 35,
     marginBottom: 20,
   },
-  input: {
-    width: '100%',
-    height: 150,
-    marginBottom: 15,
+  termContainer: {
+    marginBottom: 20,
+  },
+  termScroll: {
+    height: 200, // 고정된 높이로 스크롤 영역 설정
     backgroundColor: '#F7F7F7',
     borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    marginBottom: 10,
+  },
+  termContent: {
+    flexGrow: 1,
+    padding: 10,
+  },
+  termText: {
+    fontSize: 14,
+    color: '#333',
+    lineHeight: 20,
   },
   checkboxContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 10,
   },
-  button: {
+  sigunupnextbutton: {
     width: '100%',
     backgroundColor: '#536ed9',
-    paddingVertical: 10,
+    paddingVertical: 15,
     borderRadius: 10,
   },
   checkboxLabel: {
@@ -42,33 +55,21 @@ const styles = StyleSheet.create({
 });
 
 export default function Signup1({ onNext }) {
-  const [agreed1, setAgreed1] = useState(false);
-  const [agreed2, setAgreed2] = useState(false);
-  const [agreed3, setAgreed3] = useState(false);
-  const [allAgreed, setAllAgreed] = useState(false);
+  const [agreements, setAgreements] = useState(
+    termsData.terms.map(() => false) // 약관 개수만큼 false로 초기화
+  );
+
+  const allAgreed = agreements.every(Boolean); // 모든 약관에 동의 상태 확인
 
   const handleAllAgree = (value) => {
-    setAgreed1(value);
-    setAgreed2(value);
-    setAgreed3(value);
-    setAllAgreed(value);
+    setAgreements(agreements.map(() => value)); // 모든 약관을 동일 상태로 변경
   };
 
   const handleIndividualAgree = (index) => {
-    const newValues = [agreed1, agreed2, agreed3];
-    newValues[index] = !newValues[index];
-    setAgreed1(newValues[0]);
-    setAgreed2(newValues[1]);
-    setAgreed3(newValues[2]);
-    setAllAgreed(newValues.every((v) => v === true));
+    const newAgreements = [...agreements];
+    newAgreements[index] = !newAgreements[index];
+    setAgreements(newAgreements);
   };
-
-  const termsText = `
-    [약관 내용]
-    이 앱은 사용자 개인정보를 보호하며, 그에 따른 정책에 따릅니다.
-    회원가입 시 사용자의 개인정보를 받습니다.
-    약관에 동의하지 않으면 서비스를 이용할 수 없습니다.
-  `;
 
   return (
     <View>
@@ -86,76 +87,40 @@ export default function Signup1({ onNext }) {
         </TouchableOpacity>
       </View>
 
-      {/* 스크롤 가능한 약관 및 체크박스 영역 */}
-      <ScrollView style={styles.checkboxScroll}>
-        <TextInput
-          style={styles.input}
-          mode="outlined"
-          multiline
-          numberOfLines={6}
-          value={termsText}
-          editable={false} // 수정 불가
-          scrollEnabled={true} // 스크롤 가능
-        />
-        <View style={styles.checkboxContainer}>
-          <Checkbox
-            value={agreed1}
-            onValueChange={() => handleIndividualAgree(0)}
-            color={agreed1 ? 'blue' : undefined}
-          />
-          <TouchableOpacity onPress={() => handleIndividualAgree(0)}>
-            <Title style={styles.checkboxLabel}>첫 번째 약관에 동의합니다.</Title>
-          </TouchableOpacity>
-        </View>
+      {/* 동적 약관 렌더링 */}
+      <ScrollView style={styles.checkboxScroll} nestedScrollEnabled={true}>
+        {termsData.terms.map((term, index) => (
+          <View key={term.id} style={styles.termContainer}>
+            <ScrollView
+              style={styles.termScroll}
+              contentContainerStyle={styles.termContent} 
+              nestedScrollEnabled={true} 
+            >
+              <Text style={styles.termText}>{term.content}</Text>
+            </ScrollView>
+            <View style={styles.checkboxContainer}>
+              <Checkbox
+                value={agreements[index]}
+                onValueChange={() => handleIndividualAgree(index)}
+                color={agreements[index] ? 'blue' : undefined}
+              />
+              <TouchableOpacity onPress={() => handleIndividualAgree(index)}>
+                <Title style={styles.checkboxLabel}>
+                  {term.id}번째 약관에 동의합니다.
+                </Title>
+              </TouchableOpacity>
+            </View>
+          </View>
+        ))}
 
-        <TextInput
-          style={styles.input}
-          mode="outlined"
-          multiline
-          numberOfLines={6}
-          value={termsText}
-          editable={false} // 수정 불가
-          scrollEnabled={true} // 스크롤 가능
-        />
-        <View style={styles.checkboxContainer}>
-          <Checkbox
-            value={agreed2}
-            onValueChange={() => handleIndividualAgree(1)}
-            color={agreed2 ? 'blue' : undefined}
-          />
-          <TouchableOpacity onPress={() => handleIndividualAgree(1)}>
-            <Title style={styles.checkboxLabel}>두 번째 약관에 동의합니다.</Title>
-          </TouchableOpacity>
-        </View>
-
-        <TextInput
-          style={styles.input}
-          mode="outlined"
-          multiline
-          numberOfLines={6}
-          value={termsText}
-          editable={false} // 수정 불가
-          scrollEnabled={true} // 스크롤 가능
-        />
-        <View style={styles.checkboxContainer}>
-          <Checkbox
-            value={agreed3}
-            onValueChange={() => handleIndividualAgree(2)}
-            color={agreed3 ? 'blue' : undefined}
-          />
-          <TouchableOpacity onPress={() => handleIndividualAgree(2)}>
-            <Title style={styles.checkboxLabel}>세 번째 약관에 동의합니다.</Title>
-          </TouchableOpacity>
-        </View>
-
-        <Button
+        <TouchableOpacity
           mode="contained"
           onPress={onNext}
-          disabled={!allAgreed} // 모든 약관에 동의해야 버튼 활성화
-          style={styles.button}
+          disabled={!allAgreed} 
+          style={styles.sigunupnextbutton}
         >
-          다음
-        </Button>
+          <Text style={{ color: "#fff", fontSize: 16, textAlign: "center" }}>로그인</Text>
+        </TouchableOpacity>
       </ScrollView>
     </View>
   );

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, Alert, Text, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
-import { TextInput, Button, Title, Provider } from 'react-native-paper';
+import { View, StyleSheet, Alert, Text, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity } from 'react-native';
+import { TextInput, Title, Provider } from 'react-native-paper';
 import { API_BASE_URL } from '@env'; // .env에서 API_BASE_URL 불러오기
 import axios from 'axios';
 
@@ -39,14 +39,14 @@ const styles = StyleSheet.create({
   successbutton: { 
     width: "45%", 
     backgroundColor: '#536ed9',
-    paddingVertical: 10,
+    paddingVertical: 15,
     borderRadius: 10,
     marginLeft: 10,
   },
   signuppreviousButton: {
     width: "45%", 
     backgroundColor: '#d95e53',
-    paddingVertical: 10,
+    paddingVertical: 15,
     borderRadius: 10,
   },
 });
@@ -204,12 +204,12 @@ export default function Signup2({ onSignup, onPrevious }) {
             </View>
 
             <View style={styles.buttonContainer}>
-              <Button mode="contained" onPress={onPrevious} labelStyle={{ fontSize: 15 }} style={styles.signuppreviousButton}>
-                이전
-              </Button>
-              <Button mode="contained" onPress={handleSignup} labelStyle={{ fontSize: 15 }} style={styles.successbutton}>
-                회원가입 완료
-              </Button>
+              <TouchableOpacity onPress={onPrevious} style={styles.signuppreviousButton}>
+              <Text style={{ color: "#fff", fontSize: 16, textAlign: "center" }}>이전</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={handleSignup} style={styles.successbutton}>
+              <Text style={{ color: "#fff", fontSize: 16, textAlign: "center" }}>회원가입 완료</Text>
+              </TouchableOpacity>
             </View>
           </View>
         </ScrollView>

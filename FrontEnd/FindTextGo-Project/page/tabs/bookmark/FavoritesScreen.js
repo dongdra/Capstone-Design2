@@ -1,4 +1,3 @@
-// FavoritesScreen.js
 import React, { useState, useCallback, useContext } from 'react';
 import { View, Text, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
 import { getFavorites } from '../../../favoriteService';
@@ -8,40 +7,52 @@ import { addLog, getLogs } from '../../../logService';
 
 const FavoritesScreen = () => {
   const navigation = useNavigation();
-  const { isDarkThemeEnabled } = useContext(DataContext); // 다크 모드 상태 가져오기
+  const { isDarkThemeEnabled, identifier } = useContext(DataContext); // identifier 가져오기
   const [favoriteDocuments, setFavoriteDocuments] = useState([]);
   const [logs, setLogs] = useState([]);
 
   const fetchFavorites = useCallback(async () => {
+    if (!identifier) {
+      console.error("Identifier is required to fetch favorites.");
+      return;
+    }
     try {
-      const favorites = await getFavorites();
+      const favorites = await getFavorites(identifier); // identifier 기반으로 즐겨찾기 로드
       setFavoriteDocuments(favorites);
     } catch (error) {
       console.error('즐겨찾기 목록을 불러오는 중 오류 발생:', error);
     }
-  }, []);
+  }, [identifier]);
 
   const loadLogs = useCallback(async () => {
+    if (!identifier) {
+      console.error("Identifier is required to fetch logs.");
+      return;
+    }
     try {
-      const savedLogs = await getLogs();
+      const savedLogs = await getLogs(identifier); // identifier 기반으로 로그 로드
       setLogs(savedLogs);
     } catch (error) {
       console.error('로그 로드 중 오류 발생:', error);
     }
-  }, []);
+  }, [identifier]);
 
   useFocusEffect(
     useCallback(() => {
       const logVisit = async () => {
+        if (!identifier) {
+          console.error("Identifier is required to add a log.");
+          return;
+        }
         try {
-          await addLog('즐겨찾기 페이지에 접속했습니다.');
+          await addLog(identifier, '즐겨찾기 페이지에 접속했습니다.'); // identifier 기반으로 로그 추가
           await Promise.all([loadLogs(), fetchFavorites()]); // 로그와 즐겨찾기 목록을 병렬로 로드
         } catch (error) {
           console.error('페이지 로드 중 오류 발생:', error);
         }
       };
       logVisit();
-    }, [loadLogs, fetchFavorites])
+    }, [loadLogs, fetchFavorites, identifier])
   );
 
   const renderFavoriteItem = ({ item }) => (

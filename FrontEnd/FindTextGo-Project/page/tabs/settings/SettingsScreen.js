@@ -1,34 +1,80 @@
 // SettingsScreen.js
-import React, { useEffect, useContext, useCallback } from 'react';
-import { View, StyleSheet, Alert, ScrollView } from 'react-native';
-import { Button, Divider, Switch, List } from 'react-native-paper';
+import React, { useContext, useCallback } from 'react';
+import { View, StyleSheet, Alert, ScrollView, TouchableOpacity, Text } from 'react-native';
+import { Divider, Switch, List } from 'react-native-paper';
 import { AntDesign } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
+import Toast from 'react-native-toast-message';
 import { DataContext } from '../../../DataContext';
 import { addLog } from '../../../logService';
+import Constants from 'expo-constants';
+
+const styles = StyleSheet.create({
+  container: { flex: 1 },
+  contentContainer: { padding: 20 },
+  iconContainer: { justifyContent: 'center', alignItems: 'center', width: 40 },
+  listItem: { marginTop: 15, marginBottom: 15, paddingHorizontal: 10, borderRadius: 10 },
+  logoutbutton: { width: '100%', paddingVertical: 15, borderRadius: 10, marginTop: 30, backgroundColor: '#d95e53' },
+});
 
 const SettingsScreen = ({ onLogout }) => {
-  const { 
-    isDarkThemeEnabled, 
-    setIsDarkThemeEnabled, 
-    isNotificationsEnabled, 
+  const {
+    identifier,
+    isDarkThemeEnabled,
+    setIsDarkThemeEnabled,
+    isNotificationsEnabled,
     setIsNotificationsEnabled,
     isAutoLoginEnabled,
-    setIsAutoLoginEnabled // DataContext의 자동 로그인 설정 함수
+    setIsAutoLoginEnabled
   } = useContext(DataContext);
-
-  const toggleNotifications = () => setIsNotificationsEnabled(!isNotificationsEnabled);
-  const toggleDarkTheme = () => setIsDarkThemeEnabled(!isDarkThemeEnabled);
-  const toggleAutoLogin = () => setIsAutoLoginEnabled(!isAutoLoginEnabled);
 
   useFocusEffect(
     useCallback(() => {
       const logVisit = async () => {
-        await addLog('설정 페이지에 방문했습니다.');
+        if (!identifier) {
+          console.error("Identifier is required to add a log.");
+          return;
+        }
+        await addLog(identifier, '설정 페이지에 접속했습니다.');
       };
       logVisit();
-    }, [])
+    }, [identifier])
   );
+
+  const toggleNotifications = () => {
+    setIsNotificationsEnabled(!isNotificationsEnabled);
+    Toast.show({
+      type: 'success',
+      text1: '보안 설정이 변경되었습니다.',
+      text2: isNotificationsEnabled ? '보안이 꺼졌습니다.' : '보안이 켜졌습니다.',
+      position: 'top',
+    });
+  };
+  const toggleDarkTheme = () => {
+    setIsDarkThemeEnabled(!isDarkThemeEnabled);
+    Toast.show({
+      type: 'success',
+      text1: '테마가 변경되었습니다.',
+      text2: isDarkThemeEnabled ? '라이트 모드로 변경되었습니다.' : '다크 모드로 변경되었습니다.',
+      position: 'top',
+    });
+  };
+
+  const toggleAutoLogin = () => {
+    setIsAutoLoginEnabled(!isAutoLoginEnabled);
+    Toast.show({
+      type: 'success',
+      text1: '자동 로그인 설정이 변경되었습니다.',
+      text2: isAutoLoginEnabled ? '자동 로그인이 비활성화되었습니다.' : '자동 로그인이 활성화되었습니다.',
+      position: 'top',
+    });
+  };
+
+  const appInfo = {
+    name: Constants.expoConfig?.name || Constants.name || '알 수 없음',
+    version: Constants.expoConfig?.version || Constants.version || '알 수 없음',
+    sdkVersion: Constants.expoConfig?.sdkVersion || Constants.sdkVersion || '알 수 없음',
+  };
 
   const handleLogout = () => {
     Alert.alert('로그아웃', '성공적으로 로그아웃되었습니다.', [
@@ -48,15 +94,15 @@ const SettingsScreen = ({ onLogout }) => {
     ]}>
       <ScrollView contentContainerStyle={styles.contentContainer}>
         <Divider style={{ backgroundColor: isDarkThemeEnabled ? '#555' : '#ccc' }} />
-        
+
         <List.Item
-          title="알림 설정"
-          description="앱 알림을 켜거나 끕니다."
+          title="보안 설정"
+          description="앱의 보안성을 켜거나 끕니다."
           titleStyle={{ color: isDarkThemeEnabled ? '#bbb' : '#555' }}
           descriptionStyle={{ color: isDarkThemeEnabled ? '#bbb' : '#555' }}
           left={() => (
             <View style={styles.iconContainer}>
-              <AntDesign name="bells" size={24} color={isDarkThemeEnabled ? '#fff' : '#000'} />
+              <AntDesign name="warning" size={24} color={isDarkThemeEnabled ? '#fff' : '#000'} />
             </View>
           )}
           right={() => <Switch value={isNotificationsEnabled} onValueChange={toggleNotifications} />}
@@ -104,8 +150,8 @@ const SettingsScreen = ({ onLogout }) => {
         <Divider style={{ backgroundColor: isDarkThemeEnabled ? '#555' : '#ccc' }} />
 
         <List.Item
-          title="앱 버전 정보"
-          description="현재 앱 버전을 확인합니다."
+          title="앱 정보"
+          description={`현재 앱 버전: ${appInfo.version}`} // 간단한 정보 표시
           titleStyle={{ color: isDarkThemeEnabled ? '#bbb' : '#555' }}
           descriptionStyle={{ color: isDarkThemeEnabled ? '#bbb' : '#555' }}
           left={() => (
@@ -113,7 +159,12 @@ const SettingsScreen = ({ onLogout }) => {
               <AntDesign name="infocirlceo" size={24} color={isDarkThemeEnabled ? '#fff' : '#000'} />
             </View>
           )}
-          onPress={() => Alert.alert('앱 버전', '현재 앱 버전: 1.0.0')}
+          onPress={() => {
+            Alert.alert(
+              '앱 정보',
+              `앱 이름: ${appInfo.name}\n버전: ${appInfo.version}\nSDK 버전: ${appInfo.sdkVersion}`
+            );
+          }}
           style={[
             styles.listItem,
             { backgroundColor: isDarkThemeEnabled ? '#444' : '#f8f8f8' }
@@ -121,27 +172,20 @@ const SettingsScreen = ({ onLogout }) => {
         />
         <Divider style={{ backgroundColor: isDarkThemeEnabled ? '#555' : '#ccc' }} />
 
-        <Button
-          mode="contained"
+        <TouchableOpacity
           onPress={handleLogout}
           style={[
             styles.logoutbutton,
           ]}
-          labelStyle={{ fontSize: 16 }}
         >
-          로그아웃
-        </Button>
+          <Text style={{ color: "#fff", fontSize: 16, textAlign: "center" }}>로그아웃</Text>
+        </TouchableOpacity>
       </ScrollView>
+      <Toast topOffset={10} />
     </View>
   );
 };
 
-const styles = StyleSheet.create({
-  container: { flex: 1 },
-  contentContainer: { padding: 20 },
-  iconContainer: { justifyContent: 'center', alignItems: 'center', width: 40 },
-  listItem: { marginTop: 15, marginBottom: 15, paddingHorizontal: 10, borderRadius: 10 },
-  logoutbutton: { width: '100%', paddingVertical: 10, borderRadius: 10, marginTop: 20, backgroundColor:'#d95e53' },
-});
+
 
 export default SettingsScreen;

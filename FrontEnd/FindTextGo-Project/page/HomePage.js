@@ -28,17 +28,17 @@ export default function Home({ onLogout }) {
             tabBarIcon: ({ color, size }) => {
               let iconName;
               if (route.name === 'Home') {
-                iconName = 'home'; 
+                iconName = 'home';
               } else if (route.name === 'Profile') {
-                iconName = 'user'; 
+                iconName = 'user';
               } else if (route.name === 'Settings') {
-                iconName = 'setting'; 
+                iconName = 'setting';
               } else if (route.name === 'LogRecord') {
-                iconName = 'appstore-o'; 
+                iconName = 'appstore-o';
               } else if (route.name === 'BookMark') {
-                iconName = 'book'; 
+                iconName = 'book';
               }
-              
+
               return <AntDesign name={iconName} size={size} color={color} />;
             },
             tabBarHideOnKeyboard: true,
@@ -55,9 +55,11 @@ export default function Home({ onLogout }) {
         >
           <Tab.Screen name="BookMark" component={FavoritesScreen} options={{ tabBarLabel: '즐겨찾기' }} />
           <Tab.Screen name="LogRecord" component={LogRecordScreen} options={{ tabBarLabel: '기록' }} />
-          <Tab.Screen name="Home" component={HomeScreen} options={{ tabBarLabel: '홈' }} />  
-          <Tab.Screen name="Profile" component={ProfileScreen} options={{ tabBarLabel: '프로필' }} />   
-          <Tab.Screen name="Settings">
+          <Tab.Screen name="Home" component={HomeScreen} options={{ tabBarLabel: '홈' }} />
+          <Tab.Screen name="Profile"options={{ tabBarLabel: '프로필' }}>
+            {() => <ProfileScreen onLogout={onLogout} />}
+          </Tab.Screen>
+          <Tab.Screen name="Settings" options={{ tabBarLabel: '설정' }}>
             {() => <SettingsScreen onLogout={onLogout} />}
           </Tab.Screen>
         </Tab.Navigator>
