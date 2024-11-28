@@ -88,13 +88,17 @@ try {
     }
 
     // 파일명 검색 처리
-    if (preg_match("/filename:'((?:[^'\\\\]|\\\\.)*?)'/", $searchTerm, $matches)) {
-        $filenameSearchTerm = str_replace("''", "'", $matches[1]);
-        $filenameSearchTerm = str_replace('*', '%', $filenameSearchTerm);
-        $conditions[] = "fu.file_name LIKE ?";
-        $params[] = $filenameSearchTerm;
-        $types .= 's';
-    }
+   if (preg_match("/filename:'((?:[^'\\\\]|\\\\.)*?)'/", $searchTerm, $matches)) {
+    $filenameSearchTerm = str_replace("''", "'", $matches[1]);
+    $filenameSearchTerm = str_replace('*', '%', $filenameSearchTerm);
+
+    // 확장명 있거나 없거나 상관없이 정확한 파일명 검색
+    $conditions[] = "(fu.file_name LIKE ? OR fu.file_name LIKE ? OR SUBSTRING_INDEX(fu.file_name, '.', 1) LIKE ?)";
+    $params[] = '%' . $filenameSearchTerm . '%';
+    $params[] = '%' . $filenameSearchTerm . '.%';
+    $params[] = '%' . $filenameSearchTerm . '%';
+    $types .= 'sss'; // 세 개의 문자열 파라미터 추가
+}
 
     // 파일 형식 필터 처리 (filetype:pdf)
 
