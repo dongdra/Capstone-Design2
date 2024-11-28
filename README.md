@@ -28,7 +28,7 @@ OCR 활용 문서 검색 시스템
 - **개발 환경**: Windows 11, Ubuntu, Laragon
 - **개발 도구**: Visual Studio Code, MySQL, GitHub, Node.js
 - **개발 언어**: Python, JavaScript, PHP
-- **라이브러리**: React-Native, NaverClovaOCR
+- **라이브러리**: React-Native, NaverClovaOCR, Gemini
 
 ## 5. 기대효과
 - 문서 처리 시간 단축
