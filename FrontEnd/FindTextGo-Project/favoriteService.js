@@ -1,7 +1,9 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
+// favoriteService.js
+import * as FileSystem from 'expo-file-system';
 
-// 사용자별 즐겨찾기 키 생성
-const getFavoritesKey = (identifier) => `favorite_documents_${identifier}`;
+// 사용자별 즐겨찾기 파일 경로 생성
+const getFavoritesFilePath = (identifier) =>
+  `${FileSystem.documentDirectory}favorite_documents_${identifier}.json`;
 
 // 즐겨찾기 추가
 export const addFavorite = async (identifier, documentId, documentTitle, documentPage) => {
@@ -9,12 +11,15 @@ export const addFavorite = async (identifier, documentId, documentTitle, documen
     console.error("Identifier is required to add a favorite.");
     return;
   }
+
   try {
     const favorites = await getFavorites(identifier);
     const isFavoriteExists = favorites.some((doc) => doc.id === documentId);
+
     if (!isFavoriteExists) {
       favorites.push({ id: documentId, title: documentTitle, pages: documentPage });
-      await AsyncStorage.setItem(getFavoritesKey(identifier), JSON.stringify(favorites));
+      const filePath = getFavoritesFilePath(identifier);
+      await FileSystem.writeAsStringAsync(filePath, JSON.stringify(favorites));
     }
   } catch (error) {
     console.error("Error adding favorite:", error);
@@ -27,10 +32,12 @@ export const removeFavorite = async (identifier, documentId) => {
     console.error("Identifier is required to remove a favorite.");
     return;
   }
+
   try {
     let favorites = await getFavorites(identifier);
     favorites = favorites.filter((doc) => doc.id !== documentId);
-    await AsyncStorage.setItem(getFavoritesKey(identifier), JSON.stringify(favorites));
+    const filePath = getFavoritesFilePath(identifier);
+    await FileSystem.writeAsStringAsync(filePath, JSON.stringify(favorites));
   } catch (error) {
     console.error("Error removing favorite:", error);
   }
@@ -42,9 +49,17 @@ export const getFavorites = async (identifier) => {
     console.error("Identifier is required to fetch favorites.");
     return [];
   }
+
   try {
-    const favorites = await AsyncStorage.getItem(getFavoritesKey(identifier));
-    return favorites ? JSON.parse(favorites) : [];
+    const filePath = getFavoritesFilePath(identifier);
+    const fileInfo = await FileSystem.getInfoAsync(filePath);
+
+    if (fileInfo.exists) {
+      const favorites = await FileSystem.readAsStringAsync(filePath);
+      return JSON.parse(favorites);
+    }
+
+    return [];
   } catch (error) {
     console.error("Error fetching favorites:", error);
     return [];

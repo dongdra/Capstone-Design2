@@ -6,11 +6,9 @@ import * as DocumentPicker from 'expo-document-picker';
 import { MaterialIcons } from '@expo/vector-icons';
 import { API_BASE_URL } from '@env'; 
 import axios from 'axios';
-import { useFocusEffect } from '@react-navigation/native';
-import { addLog } from '../../../../logService';
 import { DataContext } from '../../../../DataContext';
 
-const UploadModal = ({ visible, hideModal }) => {
+const UploadModal = ({ visible, hideModal, onUploadSuccess  }) => {
   const { identifier, password, isDarkThemeEnabled } = useContext(DataContext); 
   const [errorMessage, setErrorMessage] = useState('');
   const [selectedFile, setSelectedFile] = useState(null);
@@ -109,6 +107,7 @@ const convertToBase64 = async (uri) => {
         Alert.alert('성공', '파일이 성공적으로 업로드되었습니다.');
         setSelectedFile(null);
         hideModal();
+        await onUploadSuccess(); 
       } else {
         console.log('파일 업로드 실패:', data.message);
         Alert.alert('업로드 실패', '파일 업로드에 실패했습니다.');

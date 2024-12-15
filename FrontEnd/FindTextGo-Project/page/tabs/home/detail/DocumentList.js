@@ -76,7 +76,7 @@ const styles = {
   }
 }
 
-const DocumentList = ({ documents }) => {
+const DocumentList = ({ documents, isTextSearch, onDelete  }) => {
   const { identifier, password, isDarkThemeEnabled } = useContext(DataContext);
   const [modalVisible, setModalVisible] = useState(false);
   const [summary, setSummary] = useState('');
@@ -186,6 +186,7 @@ const DocumentList = ({ documents }) => {
 
               if (response.status === 200) {
                 Alert.alert('성공', '파일이 삭제되었습니다.');
+                onDelete();
               } else if (response.status === 404) {
                 const errorMessage = response.data?.message || '해당 파일을 찾을 수 없습니다.';
                 Alert.alert('오류', errorMessage);
@@ -201,7 +202,7 @@ const DocumentList = ({ documents }) => {
       ],
       { cancelable: true }
     );
-  }, [identifier, password]);
+  }, [identifier, password, onDelete]);
 
 
   const renderItem = ({ item }) => (
@@ -210,6 +211,8 @@ const DocumentList = ({ documents }) => {
         fileName: item.title,
         documentId: item.id,
         documentPage: item.pages,
+        isTextSearch: isTextSearch, 
+        ocrResults: item.ocr_results || [],
       })}
     >
       <Card style={[
@@ -230,6 +233,7 @@ const DocumentList = ({ documents }) => {
             <Text style={[styles.CardTitleText, { color: isDarkThemeEnabled ? '#fff' : '#222' }]}>{item.title}</Text>
             <Text style={[styles.CardDateText, { color: isDarkThemeEnabled ? '#bbb' : '#848484' }]}>날짜: {item.uploaddate}</Text>
             <Text style={[styles.CardStorageText, { color: isDarkThemeEnabled ? '#bbb' : '#848484' }]}>용량: {item.content}</Text>
+            <Text style={[styles.CardStorageText, { color: isDarkThemeEnabled ? '#bbb' : '#848484' }]}>원본크기: {item.originalSize}</Text>
           </View>
         </View>
         <Divider style={[styles.divider, { backgroundColor: isDarkThemeEnabled ? '#666' : '#ccc' }]} />
@@ -237,7 +241,7 @@ const DocumentList = ({ documents }) => {
           <View style={{ flex: 1, alignItems: 'flex-start' }}>
             <Text style={[styles.CardTypeText, { color: isDarkThemeEnabled ? '#bbb' : '#848484' }]}>{item.extension}</Text>
           </View>
-          <View style={{ flex: 1, alignItems: 'center' }}>
+          <View style={{ flex: 1, alignItems: 'center', marginRight:19 }}>
             <Text style={[styles.CardPageText, { color: isDarkThemeEnabled ? '#bbb' : '#848484' }]}>{item.pages}P</Text>
           </View>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', flex: 1 }}>

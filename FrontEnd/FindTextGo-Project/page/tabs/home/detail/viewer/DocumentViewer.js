@@ -49,11 +49,15 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  darkInput: {
+    color: '#fff',
+    backgroundColor: '#555'
   }
 });
 
 const DocumentViewer = ({ route }) => {
-  const { documentId, documentPage, fileName } = route.params;
+  const { documentId, documentPage, fileName,  isTextSearch, ocrResults } = route.params;
   const { identifier, password, isDarkThemeEnabled  } = useContext(DataContext);
   const [images, setImages] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -77,15 +81,26 @@ const DocumentViewer = ({ route }) => {
     }, [identifier,fileName])
   );
 
+  useEffect(() => {
+    if (isTextSearch && ocrResults.length > 0) {
+      const formattedCoordinates = ocrResults.map((ocr) => ({
+        ...ocr.coordinates,
+        pageNumber: ocr.page_number - 1, // 페이지 번호를 0 기반으로 변환
+      }));
+      setCoordinatesList(formattedCoordinates);
+      setCurrentIndex(formattedCoordinates[0].pageNumber); // 첫 번째 OCR 결과로 이동
+    }
+  }, [isTextSearch, ocrResults]);
+
   // 이미지 불러오기 함수
   const fetchImages = async () => {
     try {
       let imageList = [];
       for (let pageNumber = 1; pageNumber <= documentPage; pageNumber++) {
-        const imageUrl = `${API_BASE_URL}/documents/${documentId}/${pageNumber}.png`;
+        const imageUrl = `${API_BASE_URL}/documents/${documentId}//webp/${pageNumber}.webp`;
   
         const response = await axios.get(imageUrl, { responseType: 'blob' });
-  
+        console.log(imageUrl)
         if (response.status === 200 && isMounted.current) {
           imageList.push({ url: imageUrl });
         }
@@ -193,7 +208,7 @@ const DocumentViewer = ({ route }) => {
   
         return (
           <View
-            key={index}
+            key={`android-box-${index}`}
             style={[
               styles.boundingBox,
               { top: y, left: x, width, height }
@@ -218,7 +233,7 @@ const DocumentViewer = ({ route }) => {
   
         return (
           <View
-            key={index}
+            key={`ios-box-${index}`}
             style={[
               styles.boundingBox,
               { top: y, left: x, width, height }
@@ -238,7 +253,8 @@ const DocumentViewer = ({ route }) => {
   }, [documentId, documentPage]);
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
+    <GestureHandlerRootView style={{ flex: 1, backgroundColor: isDarkThemeEnabled ? '#000' : '#fff' }}>
+      {!isTextSearch && (
       <View
         style={[
           styles.searchSection,
@@ -259,6 +275,7 @@ const DocumentViewer = ({ route }) => {
           <Text style={styles.searchButtonText}>검색</Text>
         </TouchableOpacity>
       </View>
+      )}
 
       {loading ? (
        <View style={styles.loaderContainer}>
@@ -266,12 +283,21 @@ const DocumentViewer = ({ route }) => {
          <Text>로딩 중...</Text>
        </View>
       ) : (
-        <View style={{ flex: 1 }}>
+        <View style={{ flex: 1, backgroundColor: isDarkThemeEnabled ? '#000' : '#fff' }}>
           <ImageViewer
+            backgroundColor={isDarkThemeEnabled ? '#000' : '#fff'}
             imageUrls={images}
             enableSwipeDown={true}
             index={currentIndex}
-            onChange={setCurrentIndex}
+            onChange={(index) => setCurrentIndex(index)}
+            // 여기 부분 추가: 페이지 정보를 표시하는 renderIndicator
+            renderIndicator={(currentIndex, allSize) => (
+              <View style={{ position: 'absolute', top: 50, left: 0, right: 0, alignItems: 'center', zIndex: 999 }}>
+                <Text style={{ color: isDarkThemeEnabled ? '#fff' : '#000', fontSize: 16 }}>
+                  {currentIndex} / {allSize}
+                </Text>
+              </View>
+            )}
             renderImage={(props) => (
               <View
                 style={styles.imageContainer}

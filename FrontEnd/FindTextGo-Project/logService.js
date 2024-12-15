@@ -1,10 +1,11 @@
 // logService.js
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as FileSystem from 'expo-file-system';
 
 const LOG_PREFIX = 'activity_logs_';
 
-// 사용자별 로그 키 생성
-const getLogKey = (identifier) => `${LOG_PREFIX}${identifier}`;
+// 사용자별 로그 파일 경로 생성
+const getLogFilePath = (identifier) =>
+  `${FileSystem.documentDirectory}${LOG_PREFIX}${identifier}.json`;
 
 // 로그 추가
 export const addLog = async (identifier, message) => {
@@ -25,15 +26,18 @@ export const addLog = async (identifier, message) => {
     const timestamp = `${year}년 ${month}월 ${day}일 ${hours}:${minutes}:${seconds}`;
     const newLog = { message, timestamp };
 
-    const logKey = getLogKey(identifier);
+    const logFilePath = getLogFilePath(identifier);
 
     // 기존 로그 가져오기
-    const logs = await AsyncStorage.getItem(logKey);
-    const parsedLogs = logs ? JSON.parse(logs) : [];
+    let logs = [];
+    if (await FileSystem.getInfoAsync(logFilePath).then((info) => info.exists)) {
+      const existingLogs = await FileSystem.readAsStringAsync(logFilePath);
+      logs = JSON.parse(existingLogs);
+    }
 
     // 새로운 로그 추가 후 저장
-    parsedLogs.push(newLog);
-    await AsyncStorage.setItem(logKey, JSON.stringify(parsedLogs));
+    logs.push(newLog);
+    await FileSystem.writeAsStringAsync(logFilePath, JSON.stringify(logs));
   } catch (error) {
     console.error("Error adding log:", error);
   }
@@ -47,9 +51,14 @@ export const getLogs = async (identifier) => {
   }
 
   try {
-    const logKey = getLogKey(identifier);
-    const logs = await AsyncStorage.getItem(logKey);
-    return logs ? JSON.parse(logs) : [];
+    const logFilePath = getLogFilePath(identifier);
+
+    if (await FileSystem.getInfoAsync(logFilePath).then((info) => info.exists)) {
+      const logs = await FileSystem.readAsStringAsync(logFilePath);
+      return JSON.parse(logs);
+    } else {
+      return [];
+    }
   } catch (error) {
     console.error("Error fetching logs:", error);
     return [];
@@ -64,8 +73,11 @@ export const clearLogs = async (identifier) => {
   }
 
   try {
-    const logKey = getLogKey(identifier);
-    await AsyncStorage.removeItem(logKey);
+    const logFilePath = getLogFilePath(identifier);
+
+    if (await FileSystem.getInfoAsync(logFilePath).then((info) => info.exists)) {
+      await FileSystem.deleteAsync(logFilePath);
+    }
   } catch (error) {
     console.error("Error clearing logs:", error);
   }

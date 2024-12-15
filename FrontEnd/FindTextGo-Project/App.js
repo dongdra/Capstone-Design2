@@ -139,19 +139,26 @@ function App() {
         >
           {isLoggedIn ? (
             <>
-              <Stack.Screen
-                name="HomePage"
-                options={({ navigation }) => ({
-                  headerLeft: () => (
-                    <TouchableOpacity onPress={() => navigation.goBack()}>
-                      <Ionicons name="arrow-back" size={24} color={isDarkThemeEnabled ? "#fff" : "#333"} style={{ marginLeft: 10 }} />
-                    </TouchableOpacity>
-                  ),
-                  headerTitle: "", // 제목 숨김
-                })}
-              >
-                {() => <HomePage onLogout={handleLogout} />}
-              </Stack.Screen>
+ <Stack.Screen
+  name="HomePage"
+  options={{
+    headerTitle: () => (
+      <Text
+        style={{
+          fontSize: 20,
+          fontWeight: "bold",
+          color: isDarkThemeEnabled ? "#ffffff" : "#333333",
+          marginLeft: Platform.OS === "ios" ? 10 : 0, // 플랫폼별 마진 조정
+        }}
+      >
+        FindTextGo
+      </Text>
+    ),
+    headerTitleAlign: "left", // 모든 플랫폼에서 왼쪽 정렬
+  }}
+>
+  {() => <HomePage onLogout={handleLogout} />}
+</Stack.Screen>
 
               <Stack.Screen
                 name="DocumentViewer"

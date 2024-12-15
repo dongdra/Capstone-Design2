@@ -119,7 +119,7 @@ export default function Signup1({ onNext }) {
           disabled={!allAgreed} 
           style={styles.sigunupnextbutton}
         >
-          <Text style={{ color: "#fff", fontSize: 16, textAlign: "center" }}>로그인</Text>
+          <Text style={{ color: "#fff", fontSize: 16, textAlign: "center" }}>다음</Text>
         </TouchableOpacity>
       </ScrollView>
     </View>

@@ -96,8 +96,8 @@ const SettingsScreen = ({ onLogout }) => {
         <Divider style={{ backgroundColor: isDarkThemeEnabled ? '#555' : '#ccc' }} />
 
         <List.Item
-          title="보안 설정"
-          description="앱의 보안성을 켜거나 끕니다."
+          title="켭쳐 방지"
+          description="화면 캡쳐 방지를 설정합니다."
           titleStyle={{ color: isDarkThemeEnabled ? '#bbb' : '#555' }}
           descriptionStyle={{ color: isDarkThemeEnabled ? '#bbb' : '#555' }}
           left={() => (
@@ -162,7 +162,7 @@ const SettingsScreen = ({ onLogout }) => {
           onPress={() => {
             Alert.alert(
               '앱 정보',
-              `앱 이름: ${appInfo.name}\n버전: ${appInfo.version}\nSDK 버전: ${appInfo.sdkVersion}`
+              `앱 이름: ${appInfo.name}\n버전: ${appInfo.version}\n`
             );
           }}
           style={[

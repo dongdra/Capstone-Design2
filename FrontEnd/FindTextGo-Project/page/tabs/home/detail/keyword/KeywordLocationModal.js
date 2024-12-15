@@ -1,6 +1,5 @@
-// KeywordModal.js
 import React from 'react';
-import { Modal, View, Text, StyleSheet, TouchableOpacity, FlatList, ScrollView } from 'react-native';
+import { Modal, View, Text, StyleSheet, TouchableOpacity, FlatList } from 'react-native';
 import { Ionicons } from '@expo/vector-icons'; // 아이콘 사용
 
 const styles = StyleSheet.create({
@@ -60,6 +59,12 @@ const styles = StyleSheet.create({
 });
 
 const KeywordModal = ({ visible, onClose, ocrResults }) => {
+  // 중복 제거 로직
+  const uniqueResults = ocrResults.filter(
+    (item, index, self) =>
+      index === self.findIndex((t) => t.extracted_text === item.extracted_text)
+  );
+
   const renderKeywordItem = ({ item }) => (
     <View style={styles.keywordItem}>
       <Text style={styles.keywordText}>{item.extracted_text}</Text>
@@ -74,9 +79,8 @@ const KeywordModal = ({ visible, onClose, ocrResults }) => {
           <TouchableOpacity onPress={onClose} style={styles.closeButton}>
             <Ionicons name="close" style={styles.closeIcon} />
           </TouchableOpacity>
-          <Text style={styles.headerText}>Extracted Keywords</Text>
           <FlatList
-            data={ocrResults}
+            data={uniqueResults} // 중복 제거된 데이터 전달
             renderItem={renderKeywordItem}
             keyExtractor={(item, index) => index.toString()}
             contentContainerStyle={styles.keywordList}

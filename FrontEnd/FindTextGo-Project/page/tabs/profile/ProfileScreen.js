@@ -16,8 +16,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   profileImage: {
-    width: 160,
-    height: 160,
+    width: 200,
+    height: 200,
     borderRadius: 100,
     borderWidth: 3,
   },
@@ -203,7 +203,7 @@ const ProfileScreen = ({ onLogout }) => {
       <View style={styles.profileHeader}>
         <Image
           style={[styles.profileImage, { borderColor: isDarkThemeEnabled ? '#555' : '#ccc' }]}
-          source={{ uri: 'https://via.placeholder.com/100' }}
+          source={{ uri: 'https://cdn.icon-icons.com/icons2/3054/PNG/512/account_profile_user_icon_190494.png' }}
         />
         <TouchableOpacity style={styles.editIcon} onPress={handleEdit}>
           <AntDesign
